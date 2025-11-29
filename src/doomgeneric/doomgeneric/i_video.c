@@ -344,8 +344,15 @@ void I_FinishUpdate (void)
     /* DRAW SCREEN */
     line_in  = (unsigned char *) I_VideoBuffer;
     line_out = (unsigned char *) DG_ScreenBuffer;
-
-    y = SCREENHEIGHT;
+    
+    // Center title screen vertically with 20-pixel top padding when not in gameplay
+    // Only copy 200 lines (Doom's actual render) to avoid buffer overflow
+    if (gamestate != GS_LEVEL) {
+        line_out += (20 * SCREENWIDTH);  // Offset output by 20 lines
+        y = 200;  // Only copy Doom's 200 rendered lines
+    } else {
+        y = SCREENHEIGHT;  // Copy all 240 lines during gameplay (includes status bar)
+    }
 
     while (y--)
     {
