@@ -211,19 +211,17 @@ void D_Display (void)
     switch (gamestate)
     {
       case GS_LEVEL:
-		if (!gametic)
-			break;
-		if (automapactive)
-			AM_Drawer ();
-		if (wipe || (viewheight != 200 && fullscreen) )
-			redrawsbar = true;
-		if (inhelpscreensstate && !inhelpscreens)
-			redrawsbar = true;              // just put away the help screen
-		ST_Drawer (viewheight == 200, redrawsbar );
-		fullscreen = viewheight == 200;
+	if (!gametic)
 		break;
-
-      case GS_INTERMISSION:
+	if (automapactive)
+		AM_Drawer ();
+	if (wipe || (screenblocks < 11 && fullscreen) )
+		redrawsbar = true;
+	if (inhelpscreensstate && !inhelpscreens)
+		redrawsbar = true;              // just put away the help screen
+	ST_Drawer (screenblocks == 11, redrawsbar );
+	fullscreen = screenblocks == 11;
+	break;      case GS_INTERMISSION:
 		WI_Drawer ();
 		break;
 

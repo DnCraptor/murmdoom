@@ -87,26 +87,36 @@ void V_CopyRect(int srcx, int srcy, byte *source,
                 int destx, int desty)
 { 
     byte *src;
-    byte *dest; 
- 
+    byte *dest;
+    int final_srcy = srcy;
+    int final_desty = desty;
+    
+    // Offset status bar area by 40 pixels to position at bottom of 240-line display
+    if (final_desty >= 168) {
+        final_desty += 40;
+    }
+    if (final_srcy >= 168) {
+        final_srcy += 40;
+    }
+    
 #ifdef RANGECHECK 
     if (srcx < 0
      || srcx + width > SCREENWIDTH
-     || srcy < 0
-     || srcy + height > SCREENHEIGHT 
+     || final_srcy < 0
+     || final_srcy + height > SCREENHEIGHT 
      || destx < 0
      || destx + width > SCREENWIDTH
-     || desty < 0
-     || desty + height > SCREENHEIGHT)
+     || final_desty < 0
+     || final_desty + height > SCREENHEIGHT)
     {
         I_Error ("Bad V_CopyRect");
     }
 #endif 
 
-    V_MarkRect(destx, desty, width, height); 
+    V_MarkRect(destx, final_desty, width, height); 
  
-    src = source + SCREENWIDTH * srcy + srcx; 
-    dest = dest_screen + SCREENWIDTH * desty + destx; 
+    src = source + SCREENWIDTH * final_srcy + srcx; 
+    dest = dest_screen + SCREENWIDTH * final_desty + destx; 
 
     for ( ; height>0 ; height--) 
     { 
@@ -148,6 +158,11 @@ void V_DrawPatch(int x, int y, patch_t *patch)
 
     y -= SHORT(patch->topoffset);
     x -= SHORT(patch->leftoffset);
+    
+    // Offset status bar area by 40 pixels to position at bottom of 240-line display
+    if (y >= 168) {
+        y += 40;
+    }
 
     // haleyjd 08/28/10: Strife needs silent error checking here.
     if(patchclip_callback)

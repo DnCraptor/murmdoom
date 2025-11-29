@@ -57,7 +57,9 @@ uint8_t* graphics_get_buffer(void);
 uint32_t graphics_get_width(void);
 uint32_t graphics_get_height(void);
 void graphics_set_res(int w, int h);
+void graphics_set_shift(int x, int y);
 void graphics_set_palette(uint8_t i, uint32_t color888);
+void graphics_restore_sync_colors(void);
 void startVIDEO(uint8_t vol);
 void set_palette(uint8_t n); // переключение палитр
 

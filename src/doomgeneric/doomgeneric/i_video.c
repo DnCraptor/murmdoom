@@ -33,6 +33,7 @@ rcsid[] = "$Id: i_x.c,v 1.6 1997/02/03 22:45:10 b1 Exp $";
 #include "i_video.h"
 #include "i_system.h"
 #include "z_zone.h"
+#include "doomstat.h"
 
 #include "tables.h"
 #include "doomkeys.h"
@@ -288,6 +289,8 @@ void I_InitGraphics (void)
 
     /* Allocate screen to draw to */
 	I_VideoBuffer = (byte*)Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);  // For DOOM to draw on
+	// Clear the entire buffer to prevent garbage in unused areas
+	memset(I_VideoBuffer, 0, SCREENWIDTH * SCREENHEIGHT);
 
 	screenvisible = true;
 
@@ -323,6 +326,11 @@ void I_FinishUpdate (void)
     int y;
     int x_offset, y_offset, x_offset_end;
     unsigned char *line_in, *line_out;
+
+    // Clear bottom area (lines 200-239) when not in gameplay to remove status bar remnants
+    if (gamestate != GS_LEVEL) {
+        memset(I_VideoBuffer + (200 * SCREENWIDTH), 0, 40 * SCREENWIDTH);
+    }
 
     /* Offsets in case FB is bigger than DOOM */
     /* 600 = s_Fb heigt, 200 screenheight */

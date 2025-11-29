@@ -40,6 +40,11 @@ void graphics_set_res(int w, int h) {
     graphics_buffer_height = h;
 }
 
+void graphics_set_shift(int x, int y) {
+    graphics_buffer_shift_x = x;
+    graphics_buffer_shift_y = y;
+}
+
 uint8_t* get_line_buffer(int line) {
     if (!graphics_buffer) return NULL;
     if (line < 0 || line >= graphics_buffer_height) return NULL;
@@ -79,6 +84,9 @@ static int SM_conv = -1;
 
 //буфер  палитры 256 цветов в формате R8G8B8
 static uint32_t palette[256];
+
+// Color substitution map for HDMI reserved indices 240-243
+static uint8_t color_substitute[4] = {239, 239, 239, 239};
 
 
 #define SCREEN_WIDTH (320)
@@ -267,7 +275,9 @@ static void dma_handler_HDMI() {
                 while (activ_buf_end > output_buffer) {
                     if (input_buffer < input_buffer_end) {
                         register uint8_t c = input_buffer[x++];
-                        *output_buffer++ = c >= BASE_HDMI_CTRL_INX ? 255 : c;
+                        // Substitute HDMI reserved colors with nearest matches
+                        if (c >= 240 && c <= 243) c = color_substitute[c - 240];
+                        *output_buffer++ = c;
                     }
                     else
                         *output_buffer++ = 255;
@@ -276,7 +286,8 @@ static void dma_handler_HDMI() {
             default:
                 for (int i = SCREEN_WIDTH; i--;) {
                     uint8_t i_color = *input_buffer++;
-                    i_color = (i_color & 0xf0) == 0xf0 ? 255 : i_color;
+                    // Substitute HDMI reserved colors with nearest matches
+                    if (i_color >= 240 && i_color <= 243) i_color = color_substitute[i_color - 240];
                     *output_buffer++ = i_color;
                 }
                 break;
@@ -390,12 +401,13 @@ static inline bool hdmi_init() {
     offs_prg0 = pio_add_program(PIO_VIDEO, &program_PIO_HDMI);
     pio_set_x(PIO_VIDEO_ADDR, SM_conv, ((uint32_t)conv_color >> 12));
 
-    //заполнение палитры
-    for (int ci = 0; ci < 240; ci++) graphics_set_palette_hdmi(ci, palette[ci]); //
-
-    //255 - цвет фона
-    graphics_set_palette_hdmi(255, palette[255]);
-
+    //заполнение палитры (skip only sync control 240-243, but initialize 244-254)
+    for (int ci = 0; ci < 240; ci++) graphics_set_palette_hdmi(ci, palette[ci]);
+    // Initialize 244-254 to black initially (will be updated when Doom sets palette)
+    for (int ci = 244; ci < 256; ci++) {
+        if (palette[ci] == 0) palette[ci] = 0x000000; // Ensure initialized
+        graphics_set_palette_hdmi(ci, palette[ci]);
+    }
 
     //240-243 служебные данные(синхра) напрямую вносим в массив -конвертер
     uint64_t* conv_color64 = (uint64_t *)conv_color;
@@ -586,8 +598,35 @@ static inline bool hdmi_init() {
 void graphics_set_palette_hdmi(uint8_t i, uint32_t color888) {
     palette[i] = color888 & 0x00ffffff;
 
-
-    if ((i >= BASE_HDMI_CTRL_INX) && (i != 255)) return; //не записываем "служебные" цвета
+    // For HDMI sync control indices (240-243), find nearest color in range 0-239
+    if (i >= 240 && i <= 243) {
+        uint8_t r = (color888 >> 16) & 0xff;
+        uint8_t g = (color888 >> 8) & 0xff;
+        uint8_t b = color888 & 0xff;
+        
+        int best_match = 239;
+        int best_distance = 999999;
+        
+        // Find closest color in palette 0-239
+        for (int j = 0; j < 240; j++) {
+            uint8_t pr = (palette[j] >> 16) & 0xff;
+            uint8_t pg = (palette[j] >> 8) & 0xff;
+            uint8_t pb = palette[j] & 0xff;
+            
+            int dr = r - pr;
+            int dg = g - pg;
+            int db = b - pb;
+            int distance = dr*dr + dg*dg + db*db;
+            
+            if (distance < best_distance) {
+                best_distance = distance;
+                best_match = j;
+            }
+        }
+        
+        color_substitute[i - 240] = best_match;
+        return; // Don't set hardware palette for these indices
+    }
 
     uint64_t* conv_color64 = (uint64_t *)conv_color;
     const uint8_t R = (color888 >> 16) & 0xff;
@@ -615,6 +654,28 @@ void graphics_set_bgcolor_hdmi(uint32_t color888) //определяем зар�
 {
     graphics_set_palette_hdmi(255, color888);
 };
+
+void graphics_restore_sync_colors(void) {
+    // Restore HDMI sync control colors after palette updates
+    uint64_t* conv_color64 = (uint64_t *)conv_color;
+    const uint16_t b0 = 0b1101010100;
+    const uint16_t b1 = 0b0010101011;
+    const uint16_t b2 = 0b0101010100;
+    const uint16_t b3 = 0b1010101011;
+    const int base_inx = BASE_HDMI_CTRL_INX;
+
+    conv_color64[2 * base_inx + 0] = get_ser_diff_data(b0, b0, b3);
+    conv_color64[2 * base_inx + 1] = get_ser_diff_data(b0, b0, b3);
+
+    conv_color64[2 * (base_inx + 1) + 0] = get_ser_diff_data(b0, b0, b2);
+    conv_color64[2 * (base_inx + 1) + 1] = get_ser_diff_data(b0, b0, b2);
+
+    conv_color64[2 * (base_inx + 2) + 0] = get_ser_diff_data(b0, b0, b1);
+    conv_color64[2 * (base_inx + 2) + 1] = get_ser_diff_data(b0, b0, b1);
+
+    conv_color64[2 * (base_inx + 3) + 0] = get_ser_diff_data(b0, b0, b0);
+    conv_color64[2 * (base_inx + 3) + 1] = get_ser_diff_data(b0, b0, b0);
+}
 
 // Wrappers for existing API
 void graphics_init(g_out g_out) {

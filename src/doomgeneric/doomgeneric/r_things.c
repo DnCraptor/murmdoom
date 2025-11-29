@@ -38,7 +38,7 @@
 
 
 #define MINZ				(FRACUNIT*4)
-#define BASEYCENTER			100
+#define BASEYCENTER			84
 
 //void R_DrawColumn (void);
 //void R_DrawFuzzColumn (void);

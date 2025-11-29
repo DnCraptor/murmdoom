@@ -66,7 +66,7 @@ target_include_directories(murmdoom PRIVATE
 target_compile_definitions(murmdoom PRIVATE
     CMAP256
     DOOMGENERIC_RESX=320
-    DOOMGENERIC_RESY=200
+    DOOMGENERIC_RESY=240
     NO_SOUND # For now
 )
 

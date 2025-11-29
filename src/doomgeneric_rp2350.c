@@ -1,5 +1,6 @@
 #include "doomgeneric.h"
 #include "doomtype.h"
+#include "doomstat.h"
 #include "board_config.h"
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
@@ -42,11 +43,14 @@ void DG_Init() {
         panic("DG_Init: OOM for Screen Buffer");
     }
     printf("DG_Init: Screen Buffer allocated at %p\n", DG_ScreenBuffer);
+    
+    // Clear screen buffer to black (color 0)
+    memset(DG_ScreenBuffer, 0, DOOMGENERIC_RESX * DOOMGENERIC_RESY * sizeof(pixel_t));
 
     printf("DG_Init: Initializing HDMI...\n");
     // Initialize HDMI
     graphics_init(g_out_HDMI);
-    graphics_set_res(320, 200);
+    graphics_set_res(320, 240);  // Physical display is 240 lines
     
     // Set buffer to DG_ScreenBuffer
     graphics_set_buffer((uint8_t*)DG_ScreenBuffer);
