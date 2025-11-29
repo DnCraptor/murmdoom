@@ -15,7 +15,11 @@
 
 void M_MakeDirectory(char *path)
 {
-    f_mkdir(path);
+    FRESULT fr = f_mkdir(path);
+    if (fr != FR_OK && fr != FR_EXIST)
+    {
+        printf("Warning: Failed to create directory '%s' (error %d)\n", path, fr);
+    }
 }
 
 boolean M_FileExists(char *filename)

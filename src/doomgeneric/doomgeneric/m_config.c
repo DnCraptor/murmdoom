@@ -2042,9 +2042,9 @@ float M_GetFloatVariable(char *name)
 
 static char *GetDefaultConfigDir(void)
 {
-    char *result = (char *)malloc(2);
-    result[0] = '.';
-    result[1] = '\0';
+    // For embedded systems with SD card, use root directory
+    char *result = (char *)malloc(1);
+    result[0] = '\0';  // Empty string means root/current directory
 
     return result;
 }
@@ -2091,6 +2091,7 @@ char *M_GetSaveGameDir(char *iwadname)
     char *topdir;
 #endif
 
+#if ORIGCODE
     // If not "doing" a configuration directory (Windows), don't "do"
     // a savegame directory, either.
 
@@ -2100,7 +2101,6 @@ char *M_GetSaveGameDir(char *iwadname)
     }
     else
     {
-#if ORIGCODE
         // ~/.chocolate-doom/savegames
 
         topdir = M_StringJoin(configdir, "savegame", NULL);
@@ -2114,14 +2114,22 @@ char *M_GetSaveGameDir(char *iwadname)
         M_MakeDirectory(savegamedir);
 
         free(topdir);
-#else
-        savegamedir = M_StringJoin(configdir, DIR_SEPARATOR_S, ".savegame/", NULL);
-
-        M_MakeDirectory(savegamedir);
-
-        printf ("Using %s for savegames\n", savegamedir);
-#endif
     }
+#else
+    // For embedded/simple filesystems, always create savegame directory
+    if (strcmp(configdir, "") == 0)
+    {
+        savegamedir = strdup(".savegame/");
+    }
+    else
+    {
+        savegamedir = M_StringJoin(configdir, DIR_SEPARATOR_S, ".savegame/", NULL);
+    }
+
+    M_MakeDirectory(savegamedir);
+
+    printf ("Using %s for savegames\n", savegamedir);
+#endif
 
     return savegamedir;
 }

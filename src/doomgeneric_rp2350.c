@@ -25,6 +25,9 @@ extern struct {
     uint8_t a;
 } colors[256];
 
+// External stdio init for FatFS
+extern void stdio_fatfs_init(void);
+
 // Global FatFs object
 FATFS fs;
 
@@ -64,6 +67,10 @@ void DG_Init() {
     } else {
         printf("DG_Init: SD Card Mounted.\n");
     }
+    
+    // Initialize stdio wrapper for FatFS
+    stdio_fatfs_init();
+    printf("DG_Init: stdio FatFS wrapper initialized.\n");
 
     printf("DG_Init: Initializing Keyboard...\n");
     // Initialize PS/2 Keyboard

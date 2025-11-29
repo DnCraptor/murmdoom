@@ -52,6 +52,7 @@ add_executable(murmdoom
     src/doomgeneric_rp2350.c
     src/doomgeneric_fatfs/w_file_fatfs.c
     src/doomgeneric_fatfs/m_misc_fatfs.c
+    src/doomgeneric_fatfs/stdio_fatfs.c
     ${DOOMGENERIC_SOURCES}
 )
 
@@ -80,6 +81,18 @@ target_link_libraries(murmdoom
     ps2kbd
     fatfs
     drivers
+)
+
+# Wrap stdio functions to use FatFS
+target_link_options(murmdoom PRIVATE
+    -Wl,--wrap=fopen
+    -Wl,--wrap=fclose
+    -Wl,--wrap=fread
+    -Wl,--wrap=fwrite
+    -Wl,--wrap=fseek
+    -Wl,--wrap=ftell
+    -Wl,--wrap=remove
+    -Wl,--wrap=rename
 )
 
 # Enable USB stdio
