@@ -55,6 +55,17 @@
 #define ADPCM_BLOCK_SIZE 128
 #define ADPCM_SAMPLES_PER_BLOCK_SIZE 249
 #define LOW_PASS_FILTER
+
+// Enable low-pass filtering to reduce resampling artifacts
+#ifndef SOUND_LOW_PASS
+#define SOUND_LOW_PASS 1
+#endif
+
+// Enable increased I2S drive strength for cleaner signal
+#ifndef INCREASE_I2S_DRIVE_STRENGTH
+#define INCREASE_I2S_DRIVE_STRENGTH 1
+#endif
+
 #define MIX_MAX_VOLUME 128
 typedef struct channel_s channel_t;
 
@@ -572,7 +583,8 @@ static boolean I_Pico_InitSound(boolean _use_sfx_prefix)
 
     // todo this will likely need adjustment - maybe with IRQs/double buffer & pull from audio we can make it quite small
     printf("I_Pico_InitSound: creating producer pool\n");
-    producer_pool = audio_new_producer_pool(&producer_format, 3, PICO_SOUND_BUFFER_SAMPLES);
+    // Increased buffer count from 3 to 4 for smoother audio and reduced dropouts
+    producer_pool = audio_new_producer_pool(&producer_format, 4, PICO_SOUND_BUFFER_SAMPLES);
     if (producer_pool == NULL)
     {
         printf("I_Pico_InitSound: failed to allocate producer pool\n");

@@ -26,7 +26,8 @@ typedef struct audio_buffer audio_buffer_t;
 #if USE_EMU8950_OPL
 #define PICO_SOUND_SAMPLE_FREQ 49716
 #else
-#define PICO_SOUND_SAMPLE_FREQ 11025
+// Increased from 11025 for better sound quality
+#define PICO_SOUND_SAMPLE_FREQ 22050
 #endif
 
 #ifndef NUM_SOUND_CHANNELS
