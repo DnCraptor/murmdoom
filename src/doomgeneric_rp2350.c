@@ -129,12 +129,16 @@ void I_Quit(void) {
 }
 
 byte *I_ZoneBase(int *size) {
-    *size = 4 * 1024 * 1024; // 4MB PSRAM (fits in 5MB PERM)
+    // 4MB PERM minus 512KB scratch = 3.5MB usable for zone + other allocations
+    *size = 3 * 1024 * 1024; // 3MB PSRAM for zone
     void *ptr = psram_malloc(*size);
     if (!ptr) {
-        printf("Failed to allocate PSRAM for Zone\n");
+        printf("Failed to allocate PSRAM for Zone (3MB), trying 2MB\n");
         *size = 2 * 1024 * 1024; // Try 2MB
         ptr = psram_malloc(*size);
+    }
+    if (ptr) {
+        printf("Zone memory allocated: %d bytes (%.2f MB)\n", *size, *size / (1024.0 * 1024.0));
     }
     return (byte *)ptr;
 }

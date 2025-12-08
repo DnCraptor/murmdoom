@@ -23,8 +23,9 @@ static uint8_t *psram_start = (uint8_t *)PSRAM_BASE;
 static size_t psram_offset = SCRATCH_SIZE;
 
 // Temp allocator support
-#define TEMP_SIZE (3 * 1024 * 1024) // 3MB for temp
-#define PERM_SIZE (PSRAM_SIZE - TEMP_SIZE)
+// Some MIDI files exceed available temp memory - game continues without music
+#define TEMP_SIZE (4 * 1024 * 1024) // 4MB for temp (music)
+#define PERM_SIZE (PSRAM_SIZE - TEMP_SIZE) // 4MB for permanent
 static size_t psram_temp_offset = 0;
 static int psram_temp_mode = 0;
 static int psram_sram_mode = 0; // Force SRAM allocation (proper malloc/free)
@@ -82,7 +83,7 @@ void *psram_malloc(size_t size) {
         *header = size;
         
         void *ptr = (void *)(header + 1);
-        // printf("psram_malloc(%d) -> %p (offset %d) Total Perm: %d\n", (int)size, ptr, (int)psram_offset, (int)(psram_offset + total_size));
+        printf("psram_malloc(%d) -> %p (offset %d) Total Perm: %d\n", (int)size, ptr, (int)psram_offset, (int)(psram_offset + total_size));
         psram_offset += total_size;
         return ptr;
     }

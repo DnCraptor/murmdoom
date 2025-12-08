@@ -401,6 +401,7 @@ static patch_t *background;
 // slam background
 void WI_slamBackground(void)
 {
+    // Draw the background - the full screen clearing is handled in I_FinishUpdate
     V_DrawPatch(0, 0, background);
 }
 

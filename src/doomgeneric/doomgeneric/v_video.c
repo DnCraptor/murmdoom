@@ -172,12 +172,16 @@ void V_DrawPatch(int x, int y, patch_t *patch)
     }
 
 #ifdef RANGECHECK
+    // Clamp rather than error - some patches may be partially off-screen after Y offset
     if (x < 0
      || x + SHORT(patch->width) > SCREENWIDTH
      || y < 0
      || y + SHORT(patch->height) > SCREENHEIGHT)
     {
-        I_Error("Bad V_DrawPatch x=%i y=%i patch.width=%i patch.height=%i topoffset=%i leftoffset=%i", x, y, patch->width, patch->height, patch->topoffset, patch->leftoffset);
+        // Instead of crashing, just skip drawing this patch
+        printf("V_DrawPatch: skipping off-screen patch x=%i y=%i w=%i h=%i\n", 
+               x, y, SHORT(patch->width), SHORT(patch->height));
+        return;
     }
 #endif
 
