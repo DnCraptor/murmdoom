@@ -84,6 +84,9 @@ typedef struct {
 static_assert(sizeof(raw_midi_event_t) == 8, "");
 #endif
 
+// Streaming chunk size - number of events to load at a time
+#define MIDI_STREAM_CHUNK_SIZE 2000
+
 typedef struct
 {
 #if !USE_DIRECT_MIDI_LUMP
@@ -94,6 +97,13 @@ typedef struct
     // Events in this track:
 
     midi_event_t *events;
+    
+    // Streaming support:
+    unsigned int chunk_start;      // First event index in current chunk
+    unsigned int chunk_count;      // Number of events in current chunk  
+    long file_pos;                 // File position for next chunk read
+    unsigned int last_event_type;  // Running status for MIDI parsing
+    boolean end_of_track;          // True if we've read the end-of-track event
 #else
 #if !USE_MUSX
     raw_midi_event_t *raw_events;
@@ -119,6 +129,10 @@ struct midi_file_s
     // Data buffer used to store data read for SysEx or meta events:
     byte *buffer;
     unsigned int buffer_size;
+    
+    // Streaming support: keep file open for streaming
+    FILE *stream;
+    char *filename;  // Keep filename for reopening if needed
 #endif
 #if USE_MUSX
     midi_track_t tracks[1];
@@ -129,6 +143,11 @@ struct midi_track_iter_s
 {
     midi_track_t *track;
     unsigned int position;
+#if !USE_DIRECT_MIDI_LUMP
+    // Streaming support
+    midi_file_t *file;
+    unsigned int track_num;
+#endif
 #if USE_MUSX
     midi_event_t events[2];
     int peek_index;
@@ -514,108 +533,164 @@ static boolean ReadTrackHeader(midi_track_t *track, FILE *stream)
     return true;
 }
 
-// Maximum events per track to prevent OOM with very large MIDI files
-#define MAX_EVENTS_PER_TRACK 50000
-
-// Helper to insert synthetic end-of-track event for truncation
-static void InsertEndOfTrack(midi_track_t *track)
+// Read a chunk of events from a track (for streaming)
+// Returns: number of events read, or -1 on error
+static int ReadTrackChunk(midi_track_t *track, FILE *stream, unsigned int max_events)
 {
-    if (track->num_events > 0)
+    midi_event_t *event;
+    unsigned int events_read = 0;
+    
+    // Allocate event buffer if not already allocated
+    if (track->events == NULL)
     {
-        // Overwrite the last event with end-of-track
-        midi_event_t *event = &track->events[track->num_events - 1];
-        // Free any data the event might have
-        if (event->event_type == MIDI_EVENT_META && event->data.meta.data != NULL) {
-            midi_free(event->data.meta.data);
+        track->events = midi_malloc(sizeof(midi_event_t) * max_events);
+        if (track->events == NULL)
+        {
+            printf("MIDI: Failed to allocate event buffer\n");
+            return -1;
         }
-        event->delta_time = 0;
-        event->event_type = MIDI_EVENT_META;
-        event->data.meta.type = MIDI_META_END_OF_TRACK;
-        event->data.meta.length = 0;
-        event->data.meta.data = NULL;
+    }
+    
+    // Read events until we fill the buffer or hit end of track
+    while (events_read < max_events && !track->end_of_track)
+    {
+        event = &track->events[events_read];
+        
+        if (!ReadEvent(event, &track->last_event_type, stream))
+        {
+            // Read error
+            if (events_read == 0)
+            {
+                return -1;
+            }
+            // Mark as end of track
+            track->end_of_track = true;
+            break;
+        }
+        
+        events_read++;
+        
+        // Check for end of track marker
+        if (event->event_type == MIDI_EVENT_META
+         && event->data.meta.type == MIDI_META_END_OF_TRACK)
+        {
+            track->end_of_track = true;
+            break;
+        }
+    }
+    
+    // Save file position for next chunk
+    track->file_pos = ftell(stream);
+    track->chunk_count = events_read;
+    
+    return events_read;
+}
+
+// Free events in a track chunk (for streaming - before loading next chunk)
+static void FreeTrackChunkEvents(midi_track_t *track)
+{
+    unsigned int i;
+    for (i = 0; i < track->chunk_count; i++)
+    {
+        midi_event_t *event = &track->events[i];
+        if (event->event_type == MIDI_EVENT_META && event->data.meta.data != NULL)
+        {
+            midi_free(event->data.meta.data);
+            event->data.meta.data = NULL;
+        }
     }
 }
 
-static boolean ReadTrack(midi_track_t *track, FILE *stream)
+// Load the next chunk of events for a track (called during playback)
+// Returns 1 if more events are available, 0 otherwise
+int MIDI_LoadNextChunk(midi_file_t *file, unsigned int track_num)
 {
-    midi_event_t *new_events;
-    midi_event_t *event;
-    unsigned int last_event_type;
-    unsigned int allocated_events = 0;
+    midi_track_t *track;
+    int events_read;
+    
+    if (track_num >= file->num_tracks)
+    {
+        return 0;
+    }
+    
+    track = &file->tracks[track_num];
+    
+    // Already at end of track?
+    if (track->end_of_track)
+    {
+        return 0;
+    }
+    
+    // Make sure file is open
+    if (file->stream == NULL)
+    {
+        if (file->filename == NULL)
+        {
+            return 0;
+        }
+        file->stream = fopen(file->filename, "rb");
+        if (file->stream == NULL)
+        {
+            return 0;
+        }
+    }
+    
+    // Seek to the saved position
+    if (fseek(file->stream, track->file_pos, SEEK_SET) != 0)
+    {
+        return 0;
+    }
+    
+    // Free previous chunk's meta data
+    FreeTrackChunkEvents(track);
+    
+    // Update chunk start position
+    track->chunk_start += track->chunk_count;
+    
+    // Read next chunk
+    events_read = ReadTrackChunk(track, file->stream, MIDI_STREAM_CHUNK_SIZE);
+    if (events_read < 0)
+    {
+        return 0;
+    }
+    
+    track->num_events = track->chunk_start + track->chunk_count;
+    printf("MIDI: Loaded next chunk, %d events (total %d)\n", events_read, track->num_events);
+    
+    return 1;
+}
 
+static boolean ReadTrackFirstChunk(midi_track_t *track, FILE *stream)
+{
+    int events_read;
+    
     track->num_events = 0;
     track->events = NULL;
+    track->chunk_start = 0;
+    track->chunk_count = 0;
+    track->last_event_type = 0;
+    track->end_of_track = false;
 
     // Read the header:
-
     if (!ReadTrackHeader(track, stream))
     {
         return false;
     }
 
-    // Then the events:
-
-    last_event_type = 0;
-
-    for (;;)
+    // Save position before reading events
+    track->file_pos = ftell(stream);
+    
+    // Read first chunk of events
+    events_read = ReadTrackChunk(track, stream, MIDI_STREAM_CHUNK_SIZE);
+    if (events_read < 0)
     {
-        // Check event limit to prevent OOM
-        if (track->num_events >= MAX_EVENTS_PER_TRACK)
-        {
-            printf("MIDI: Track truncated at %d events (limit)\n", track->num_events);
-            InsertEndOfTrack(track);
-            break;
-        }
-        
-        // Allocate in chunks to avoid reallocating every event
-        if (track->num_events >= allocated_events)
-        {
-            // Try smaller chunks near memory limits
-            unsigned int grow_by = (allocated_events < 1000) ? 64 : 32;
-            allocated_events = track->num_events + grow_by;
-            
-            new_events = midi_malloc(sizeof(midi_event_t) * allocated_events);
-            if (new_events == NULL) {
-                // Allocation failed - truncate the track here
-                printf("MIDI: Track truncated at %d events (OOM)\n", track->num_events);
-                if (track->num_events > 0) {
-                    InsertEndOfTrack(track);
-                    break;  // Continue with truncated track
-                }
-                return false;  // No events at all, real failure
-            }
-            if (track->events != NULL) {
-                memcpy(new_events, track->events, sizeof(midi_event_t) * track->num_events);
-                midi_free(track->events);
-            }
-            track->events = new_events;
-        }
-
-        // Read the next event:
-
-        event = &track->events[track->num_events];
-        if (!ReadEvent(event, &last_event_type, stream))
-        {
-            // Read error - try to salvage what we have
-            if (track->num_events > 0) {
-                printf("MIDI: Track truncated at %d events (read error)\n", track->num_events);
-                InsertEndOfTrack(track);
-                break;
-            }
-            return false;
-        }
-
-        ++track->num_events;
-
-        // End of track?
-
-        if (event->event_type == MIDI_EVENT_META
-         && event->data.meta.type == MIDI_META_END_OF_TRACK)
-        {
-            break;
-        }
+        return false;
     }
-
+    
+    track->num_events = events_read;
+    
+    printf("MIDI: Track loaded %d events (streaming enabled)\n", events_read);
+    
     return true;
 }
 
@@ -647,11 +722,11 @@ static boolean ReadAllTracks(midi_file_t *file, FILE *stream)
 
     memset(file->tracks, 0, sizeof(midi_track_t) * file->num_tracks);
 
-    // Read each track:
+    // Read first chunk of each track (streaming mode):
 
     for (i=0; i<file->num_tracks; ++i)
     {
-        if (!ReadTrack(&file->tracks[i], stream))
+        if (!ReadTrackFirstChunk(&file->tracks[i], stream))
         {
             return false;
         }
@@ -711,6 +786,20 @@ void MIDI_FreeFile(midi_file_t *file)
         }
         midi_free(file->tracks);
     }
+    
+    // Close streaming file handle
+    if (file->stream != NULL)
+    {
+        fclose(file->stream);
+        file->stream = NULL;
+    }
+    
+    // Free stored filename
+    if (file->filename != NULL)
+    {
+        midi_free(file->filename);
+        file->filename = NULL;
+    }
 #endif
 
     midi_free(file);
@@ -733,6 +822,8 @@ midi_file_t *MIDI_LoadFile(char *filename)
     file->num_tracks = 0;
     file->buffer = NULL;
     file->buffer_size = 0;
+    file->stream = NULL;
+    file->filename = NULL;
 
     // Open file
 
@@ -754,7 +845,7 @@ midi_file_t *MIDI_LoadFile(char *filename)
         return NULL;
     }
 
-    // Read all tracks:
+    // Read all tracks (first chunk of each for streaming):
 
     if (!ReadAllTracks(file, stream))
     {
@@ -763,7 +854,14 @@ midi_file_t *MIDI_LoadFile(char *filename)
         return NULL;
     }
 
-    fclose(stream);
+    // Keep file open for streaming and store filename
+    file->stream = stream;
+    size_t name_len = strlen(filename) + 1;
+    file->filename = midi_malloc(name_len);
+    if (file->filename != NULL)
+    {
+        memcpy(file->filename, filename, name_len);
+    }
 
     return file;
 }
@@ -791,6 +889,11 @@ midi_track_iter_t *MIDI_IterateTrack(midi_file_t *file, unsigned int track)
 //    PrintTrack(&file->tracks[track]);
     iter = midi_malloc(sizeof(*iter));
     iter->track = &file->tracks[track];
+#if !USE_DIRECT_MIDI_LUMP
+    // Store file reference for streaming
+    iter->file = file;
+    iter->track_num = track;
+#endif
     MIDI_RestartIterator(iter);
     return iter;
 }
@@ -800,6 +903,43 @@ void MIDI_FreeIterator(midi_track_iter_t *iter)
     midi_free(iter);
 }
 
+// Helper to get the index into the events array for a given absolute position
+static inline int GetChunkIndex(midi_track_t *track, unsigned int position)
+{
+    return position - track->chunk_start;
+}
+
+// Check if we need to load the next chunk and do so if needed
+static int EnsureEventLoaded(midi_track_iter_t *iter)
+{
+#if !USE_DIRECT_MIDI_LUMP
+    midi_track_t *track = iter->track;
+    
+    // Check if current position is beyond the loaded chunk
+    if (iter->position >= track->chunk_start + track->chunk_count)
+    {
+        // Need to load next chunk
+        if (track->end_of_track)
+        {
+            return 0;  // No more events
+        }
+        
+        // Load next chunk
+        if (!MIDI_LoadNextChunk(iter->file, iter->track_num))
+        {
+            return 0;  // Failed to load or no more events
+        }
+        
+        // Reset position to start of new chunk if we somehow got ahead
+        if (iter->position < track->chunk_start)
+        {
+            iter->position = track->chunk_start;
+        }
+    }
+#endif
+    return 1;
+}
+
 // Get the time until the next MIDI event in a track.
 
 unsigned int MIDI_GetDeltaTime(midi_track_iter_t *iter)
@@ -807,22 +947,33 @@ unsigned int MIDI_GetDeltaTime(midi_track_iter_t *iter)
 #if USE_MUSX
     return iter->events[iter->peek_index^1].delta_time;
 #else
+#if USE_DIRECT_MIDI_LUMP
     if (iter->position < iter->track->num_events)
     {
-#if USE_DIRECT_MIDI_LUMP
         raw_midi_event_t *next_event;
         next_event = &iter->track->raw_events[iter->position];
-#else
-        midi_event_t *next_event;
-        next_event = &iter->track->events[iter->position];
-        return next_event->delta_time;
-#endif
         return next_event->delta_time;
     }
     else
     {
         return 0;
     }
+#else
+    // Streaming mode: check if we need to load more events
+    if (!EnsureEventLoaded(iter))
+    {
+        return 0;
+    }
+    
+    // Get event from chunk
+    int chunk_idx = GetChunkIndex(iter->track, iter->position);
+    if (chunk_idx < 0 || chunk_idx >= (int)iter->track->chunk_count)
+    {
+        return 0;
+    }
+    
+    return iter->track->events[chunk_idx].delta_time;
+#endif
 #endif
 }
 
@@ -855,15 +1006,11 @@ int MIDI_GetNextEvent(midi_track_iter_t *iter, midi_event_t **event)
     peek_event(iter);
     return 1;
 #else
+#if USE_DIRECT_MIDI_LUMP
     if (iter->position < iter->track->num_events)
     {
-#if USE_DIRECT_MIDI_LUMP
         *event = &iter->track->current_event;
         MIDI_DecodeEvent(&iter->track->raw_events[iter->position], *event);
-        ++iter->position;
-#else
-        *event = &iter->track->events[iter->position];
-#endif
         ++iter->position;
         return 1;
     }
@@ -871,6 +1018,24 @@ int MIDI_GetNextEvent(midi_track_iter_t *iter, midi_event_t **event)
     {
         return 0;
     }
+#else
+    // Streaming mode: check if we need to load more events
+    if (!EnsureEventLoaded(iter))
+    {
+        return 0;
+    }
+    
+    // Get event from chunk
+    int chunk_idx = GetChunkIndex(iter->track, iter->position);
+    if (chunk_idx < 0 || chunk_idx >= (int)iter->track->chunk_count)
+    {
+        return 0;
+    }
+    
+    *event = &iter->track->events[chunk_idx];
+    ++iter->position;
+    return 1;
+#endif
 #endif
 }
 

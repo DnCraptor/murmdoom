@@ -185,5 +185,8 @@ int MIDI_GetNextEvent(midi_track_iter_t *iter, midi_event_t **event);
 
 void MIDI_RestartIterator(midi_track_iter_t *iter);
 
+// Load next chunk of events for streaming (returns true if more events available)
+int MIDI_LoadNextChunk(midi_file_t *file, unsigned int track_num);
+
 #endif /* #ifndef MIDIFILE_H */
 
