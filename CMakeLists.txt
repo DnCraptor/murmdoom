@@ -57,6 +57,13 @@ list(APPEND DOOMGENERIC_SOURCES
     src/doomgeneric/doomgeneric/doomgeneric.c # Re-add doomgeneric.c if it was excluded
     src/doomgeneric/doomgeneric/wi_stuff.c
     src/pico/i_picosound.c
+    src/pico/i_oplmusic.c
+    src/midifile.c
+    src/opl/emu8950.c
+    src/opl/emuadpcm.c
+    src/opl/opl_api.c
+    src/opl/opl_pico.c
+    src/opl/slot_render.cpp
 )
 
 # Remove duplicates
@@ -68,6 +75,7 @@ add_executable(murmdoom
     src/doomgeneric_fatfs/w_file_fatfs.c
     src/doomgeneric_fatfs/m_misc_fatfs.c
     src/doomgeneric_fatfs/stdio_fatfs.c
+    src/opl/slot_render_pico.S
     ${DOOMGENERIC_SOURCES}
 )
 
@@ -76,6 +84,7 @@ target_include_directories(murmdoom PRIVATE
     src/doomgeneric/doomgeneric
     src/pico
     src/fatfs
+    src/opl
     drivers
     drivers/sdcard
 )
@@ -86,6 +95,8 @@ target_compile_definitions(murmdoom PRIVATE
     DOOMGENERIC_RESY=240
     FEATURE_SOUND  # Enable sound support
     USE_PICO_SOUND  # Use Pico audio i2s backend
+    USE_OPL_MUSIC=1  # Enable OPL music
+    USE_EMU8950_OPL=1  # Use emu8950 OPL emulator
     PICO_AUDIO_I2S_DATA_PIN=26
     PICO_AUDIO_I2S_CLOCK_PIN_BASE=27
     PICO_AUDIO_I2S_PIO=1
@@ -96,6 +107,23 @@ target_compile_definitions(murmdoom PRIVATE
     NO_USE_TIMIDITY
     NO_USE_GUS
     NO_USE_MUSIC_PACKS
+    USE_DIRECT_MIDI_LUMP=0  # Use file-based MIDI (works, uses PSRAM allocation)
+    # EMU8950 optimizations from rp2040-doom
+    EMU8950_NO_WAVE_TABLE_MAP=1
+    EMU8950_NO_TLL=1
+    EMU8950_NO_FLOAT=1
+    EMU8950_NO_TIMER=1
+    EMU8950_NO_TEST_FLAG=1
+    EMU8950_SIMPLER_NOISE=1
+    EMU8950_SHORT_NOISE_UPDATE_CHECK=1
+    EMU8950_LINEAR_SKIP=1
+    EMU8950_LINEAR_END_OF_NOTE_OPTIMIZATION=1
+    EMU8950_NO_PERCUSSION_MODE=1
+    EMU8950_LINEAR=1
+    EMU8950_ASM=1
+    EMU8950_SLOT_RENDER=1
+    EMU8950_NO_RATECONV=1
+    PICO_ON_DEVICE=1
 )
 
 target_link_libraries(murmdoom
@@ -107,6 +135,7 @@ target_link_libraries(murmdoom
     hardware_pio
     hardware_pwm
     hardware_irq
+    hardware_interp
     sdcard
     ps2kbd
     fatfs
@@ -118,6 +147,7 @@ target_link_options(murmdoom PRIVATE
     -Wl,--wrap=fopen
     -Wl,--wrap=fclose
     -Wl,--wrap=fread
+    -Wl,--wrap=fgetc
     -Wl,--wrap=fwrite
     -Wl,--wrap=fseek
     -Wl,--wrap=ftell

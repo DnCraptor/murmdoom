@@ -78,15 +78,27 @@ int __wrap_fclose(FILE *fp) {
     return EOF;
 }
 
-size_t __wrap_fread(void *ptr, size_t size, size_t nmemb, FILE *fp) {
+size_t __wrap_fread(const void *ptr, size_t size, size_t nmemb, FILE *fp) {
     FIL *fil = file_to_fil(fp);
     UINT br;
     FRESULT fr;
     
-    fr = f_read(fil, ptr, size * nmemb, &br);
+    fr = f_read(fil, (void*)ptr, size * nmemb, &br);
     if (fr != FR_OK) return 0;
     
     return br / size;
+}
+
+int __wrap_fgetc(FILE *fp) {
+    FIL *fil = file_to_fil(fp);
+    UINT br;
+    FRESULT fr;
+    unsigned char c;
+    
+    fr = f_read(fil, &c, 1, &br);
+    if (fr != FR_OK || br == 0) return EOF;
+    
+    return (int)c;
 }
 
 size_t __wrap_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *fp) {

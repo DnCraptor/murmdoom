@@ -68,6 +68,10 @@ static inline unsigned long swapLE32(unsigned long val) {
 
 #endif  // __DJGPP__
 
+// SDL compatibility for byte swapping
+#define SDL_SwapBE16(x) __builtin_bswap16(x)
+#define SDL_SwapBE32(x) __builtin_bswap32(x)
 
 #endif
+
 

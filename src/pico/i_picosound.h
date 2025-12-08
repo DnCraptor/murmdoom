@@ -39,4 +39,5 @@ void I_PicoSoundSetMusicGenerator(void (*generator)(audio_buffer_t *buffer));
 bool I_PicoSoundIsInitialized(void);
 void I_PicoSoundFade(bool in);
 bool I_PicoSoundFading(void);
+void *I_GetMusicGeneratorPtr(void);
 #endif

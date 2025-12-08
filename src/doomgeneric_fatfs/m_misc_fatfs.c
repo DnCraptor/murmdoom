@@ -87,8 +87,8 @@ int M_ReadFile(char *name, byte **buffer)
 
 char *M_TempFile(char *s)
 {
-    char *tempdir = "/tmp"; // Default for now
-    return M_StringJoin(tempdir, DIR_SEPARATOR_S, s, NULL);
+    char *tempdir = ""; // Use root of SD card
+    return M_StringJoin(tempdir, s, NULL);
 }
 
 boolean M_StrToInt(const char *str, int *result)

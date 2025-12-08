@@ -48,9 +48,13 @@
 
 #ifdef __GNUC__
 #define PACKEDATTR __attribute__((packed))
+#define PACKEDPREFIX
 #else
 #define PACKEDATTR
+#define PACKEDPREFIX __packed
 #endif
+
+#define PACKED_STRUCT(...) PACKEDPREFIX struct __VA_ARGS__ PACKEDATTR
 
 // C99 integer types; with gcc we just use this.  Other compilers 
 // should add conditional statements that define the C99 types.
@@ -98,6 +102,12 @@ typedef uint8_t byte;
 #endif
 
 #define arrlen(array) (sizeof(array) / sizeof(*array))
+
+// Additional rp2040-doom compatibility types
+#define should_be_const const
+typedef const char * constcharstar;
+typedef int16_t isb_int16_t;
+#define stderr_print(...) printf(__VA_ARGS__)
 
 #endif
 

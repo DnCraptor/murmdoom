@@ -115,13 +115,21 @@ void I_Error(char *error, ...) {
     while(1) tight_loop_contents();
 }
 
+void *I_Realloc(void *ptr, size_t size) {
+    void *new_ptr = realloc(ptr, size);
+    if (size != 0 && new_ptr == NULL) {
+        I_Error("I_Realloc: failed on reallocation of %zu bytes", size);
+    }
+    return new_ptr;
+}
+
 void I_Quit(void) {
     printf("I_Quit\n");
     while(1) tight_loop_contents();
 }
 
 byte *I_ZoneBase(int *size) {
-    *size = 8 * 1024 * 1024; // 8MB PSRAM
+    *size = 4 * 1024 * 1024; // 4MB PSRAM (fits in 5MB PERM)
     void *ptr = psram_malloc(*size);
     if (!ptr) {
         printf("Failed to allocate PSRAM for Zone\n");
