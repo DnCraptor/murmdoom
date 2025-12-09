@@ -22,11 +22,20 @@ Both boards provide all necessary peripherals out of the box—no additional wir
 
 ## Hardware Requirements
 
-- **Raspberry Pi Pico 2** (RP2350 with 8MB PSRAM) or compatible board
+- **Raspberry Pi Pico 2** (RP2350) or compatible board
+- **8MB QSPI PSRAM** (mandatory!)
 - **HDMI connector** (directly connected via resistors, no HDMI encoder needed)
 - **SD card module** (SPI mode)
 - **PS/2 keyboard** (directly connected)
 - **I2S DAC module** (e.g., PCM5102A) for audio output
+
+### PSRAM Options
+
+MurmDoom requires 8MB PSRAM to run. You can obtain PSRAM-equipped hardware in several ways:
+
+1. **Solder a PSRAM chip** on top of the Flash chip on a standard Pico 2
+2. **Build a [Nyx 2](https://rh1.tech/projects/nyx?area=nyx2)** — a DIY RP2350 board with integrated PSRAM
+3. **Purchase a [Pimoroni Pico Plus 2](https://shop.pimoroni.com/products/pimoroni-pico-plus-2?variant=42092668289107)** — a ready-made Pico 2 with 8MB PSRAM
 
 ## Board Configurations
 
@@ -126,10 +135,7 @@ picotool load -f build/murmdoom.uf2
 ## SD Card Setup
 
 1. Format an SD card as FAT32
-2. Copy a DOOM WAD file to the root:
-   - `doom1.wad` (Shareware)
-   - `doom.wad` (Registered)
-   - `doom2.wad` (DOOM II)
+2. Copy any DOOM-engine WAD file to the root (e.g., `doom1.wad`, `doom.wad`, `doom2.wad`, `plutonia.wad`, `tnt.wad`, or custom WADs)
 3. A `.savegame/` directory will be created automatically for save files
 
 ### Shareware WAD Downloads
