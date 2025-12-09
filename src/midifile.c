@@ -647,8 +647,20 @@ int MIDI_LoadNextChunk(midi_file_t *file, unsigned int track_num)
     // Update chunk start position
     track->chunk_start += track->chunk_count;
     
+    // Enable temp mode for streaming allocations (meta data, sysex, etc.)
+    // This ensures streaming doesn't consume permanent PSRAM
+#ifdef PICO_BUILD
+    extern void psram_set_temp_mode(int enable);
+    psram_set_temp_mode(1);
+#endif
+    
     // Read next chunk
     events_read = ReadTrackChunk(track, file->stream, MIDI_STREAM_CHUNK_SIZE);
+    
+#ifdef PICO_BUILD
+    psram_set_temp_mode(0);
+#endif
+    
     if (events_read < 0)
     {
         return 0;
@@ -1087,8 +1099,19 @@ void MIDI_RestartIterator(midi_track_iter_t *iter)
         fseek(file->stream, track->initial_file_pos, SEEK_SET);
         track->file_pos = track->initial_file_pos;
         
+        // Enable temp mode for streaming allocations
+#ifdef PICO_BUILD
+        extern void psram_set_temp_mode(int enable);
+        psram_set_temp_mode(1);
+#endif
+        
         // Read first chunk again
         int events_read = ReadTrackChunk(track, file->stream, MIDI_STREAM_CHUNK_SIZE);
+        
+#ifdef PICO_BUILD
+        psram_set_temp_mode(0);
+#endif
+        
         if (events_read > 0)
         {
             track->num_events = events_read;
