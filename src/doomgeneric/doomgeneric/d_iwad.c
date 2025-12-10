@@ -420,8 +420,9 @@ static char *CheckDirectoryHasIWAD(char *dir, char *iwadname)
     // Construct the full path to the IWAD if it is located in
     // this directory, and check if it exists.
 
-    if (!strcmp(dir, "."))
+    if (!strcmp(dir, ".") || !strcmp(dir, "/"))
     {
+        // Current directory or root - just use the filename (FatFS relative path)
         filename = strdup(iwadname);
     }
     else

@@ -3,6 +3,7 @@
 /*------------------------------------------------------------------------*/
 
 #include "ff.h"
+#include <stdio.h>
 
 
 #if FF_USE_LFN == 3	/* Use dynamic memory allocation */
@@ -18,7 +19,11 @@ void* ff_memalloc (	/* Returns pointer to the allocated memory block (null if no
 	UINT msize		/* Number of bytes to allocate */
 )
 {
-	return malloc((size_t)msize);	/* Allocate a new memory block */
+	void *p = malloc((size_t)msize);	/* Allocate a new memory block */
+	if (!p) {
+		printf("ff_memalloc(%u) FAILED!\n", msize);
+	}
+	return p;
 }
 
 

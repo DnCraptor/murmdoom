@@ -1,3 +1,4 @@
+#include "../../src/board_config.h"
 #include "ps2kbd_wrapper.h"
 #include "ps2kbd_mrmltr.h"
 #include "doomkeys.h"
@@ -96,8 +97,10 @@ static void key_handler(hid_keyboard_report_t *curr, hid_keyboard_report_t *prev
 static Ps2Kbd_Mrmltr* kbd = nullptr;
 
 extern "C" void ps2kbd_init(void) {
-    // GPIO 0 (Data), GPIO 1 (Clk)
-    kbd = new Ps2Kbd_Mrmltr(pio0, 0, key_handler);
+    // PS2 keyboard driver expects base_gpio as CLK, and base_gpio+1 as DATA
+    // For M1: PS2_PIN_CLK=0, PS2_PIN_DATA=1, so base should be PS2_PIN_CLK
+    // For M2: PS2_PIN_CLK=2, PS2_PIN_DATA=3, so base should be PS2_PIN_CLK
+    kbd = new Ps2Kbd_Mrmltr(pio0, PS2_PIN_CLK, key_handler);
     kbd->init_gpio();
 }
 

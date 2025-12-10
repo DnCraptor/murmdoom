@@ -9,6 +9,15 @@
 #include <stdarg.h>
 #include <errno.h>
 
+// Helper to convert string to uppercase
+static void str_to_upper(char *str)
+{
+    while (*str) {
+        *str = toupper((unsigned char)*str);
+        str++;
+    }
+}
+
 //
 // File I/O overrides for FatFs
 //
@@ -25,7 +34,9 @@ void M_MakeDirectory(char *path)
 boolean M_FileExists(char *filename)
 {
     FILINFO fno;
-    return f_stat(filename, &fno) == FR_OK;
+    FRESULT fr = f_stat(filename, &fno);
+    printf("M_FileExists('%s') = %s (fr=%d)\n", filename, fr == FR_OK ? "true" : "false", fr);
+    return fr == FR_OK;
 }
 
 long M_FileLength(FILE *handle)

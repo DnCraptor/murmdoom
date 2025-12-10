@@ -20,6 +20,7 @@
 
 
 #include <string.h>
+#include <stdio.h>
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of device I/O functions */
 
@@ -4790,18 +4791,22 @@ FRESULT f_stat (
 
 	/* Get logical drive */
 	res = mount_volume(&path, &dj.obj.fs, 0);
-	if (res == FR_OK) {
-		INIT_NAMBUF(dj.obj.fs);
-		res = follow_path(&dj, path);	/* Follow the file path */
-		if (res == FR_OK) {				/* Follow completed */
-			if (dj.fn[NSFLAG] & NS_NONAME) {	/* It is origin directory */
-				res = FR_INVALID_NAME;
-			} else {							/* Found an object */
-				if (fno) get_fileinfo(&dj, fno);
-			}
-		}
-		FREE_NAMBUF();
+	if (res != FR_OK) {
+		printf("f_stat: mount_volume failed: %d\n", res);
+		return res;
 	}
+	INIT_NAMBUF(dj.obj.fs);
+	res = follow_path(&dj, path);	/* Follow the file path */
+	if (res == FR_OK) {				/* Follow completed */
+		if (dj.fn[NSFLAG] & NS_NONAME) {	/* It is origin directory */
+			res = FR_INVALID_NAME;
+		} else {							/* Found an object */
+			if (fno) get_fileinfo(&dj, fno);
+		}
+	} else {
+		printf("f_stat: follow_path failed: %d\n", res);
+	}
+	FREE_NAMBUF();
 
 	LEAVE_FF(dj.obj.fs, res);
 }

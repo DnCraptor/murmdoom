@@ -128,16 +128,28 @@ target_compile_definitions(murmdoom PRIVATE
     PICO_ON_DEVICE=1
 )
 
-# Set I2S pins based on board variant
+# Set peripheral pins based on board variant
 if(BOARD_VARIANT STREQUAL "M1")
     target_compile_definitions(murmdoom PRIVATE
+        # I2S Audio
         PICO_AUDIO_I2S_DATA_PIN=26
         PICO_AUDIO_I2S_CLOCK_PIN_BASE=27
+        # SD Card
+        SDCARD_PIN_SPI0_CS=5
+        SDCARD_PIN_SPI0_SCK=2
+        SDCARD_PIN_SPI0_MOSI=3
+        SDCARD_PIN_SPI0_MISO=4
     )
 elseif(BOARD_VARIANT STREQUAL "M2")
     target_compile_definitions(murmdoom PRIVATE
+        # I2S Audio
         PICO_AUDIO_I2S_DATA_PIN=9
         PICO_AUDIO_I2S_CLOCK_PIN_BASE=10
+        # SD Card
+        SDCARD_PIN_SPI0_CS=5
+        SDCARD_PIN_SPI0_SCK=6
+        SDCARD_PIN_SPI0_MOSI=7
+        SDCARD_PIN_SPI0_MISO=4
     )
 endif()
 

@@ -1,3 +1,4 @@
+#include "../src/board_config.h"
 #include "HDMI.h"
 #include <stdio.h>
 #include <string.h>
