@@ -38,6 +38,7 @@ add_library(drivers
     drivers/psram_allocator.c
 )
 target_include_directories(drivers PUBLIC drivers)
+target_compile_definitions(drivers PRIVATE BOARD_${BOARD_VARIANT})
 target_link_libraries(drivers pico_stdlib hardware_dma hardware_pio hardware_spi)
 
 # Doomgeneric sources

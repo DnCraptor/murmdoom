@@ -9,11 +9,19 @@ ${CMAKE_CURRENT_LIST_DIR}/ps2kbd_mrmltr.h
 
 target_link_libraries(ps2kbd PRIVATE hardware_pio hardware_clocks)
 
+# Add board variant define and KBD_CLOCK_PIN for PIO program selection
+if(BOARD_VARIANT STREQUAL "M2")
+    target_compile_definitions(ps2kbd PRIVATE BOARD_M2 KBD_CLOCK_PIN=2)
+else()
+    target_compile_definitions(ps2kbd PRIVATE BOARD_M1 KBD_CLOCK_PIN=0)
+endif()
+
 target_include_directories(ps2kbd PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}
 )
 
 target_include_directories(ps2kbd PRIVATE
+    ../../src
     ../../src/doomgeneric/doomgeneric
     ../../src/fatfs
 )

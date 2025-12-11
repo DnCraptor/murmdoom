@@ -4792,7 +4792,6 @@ FRESULT f_stat (
 	/* Get logical drive */
 	res = mount_volume(&path, &dj.obj.fs, 0);
 	if (res != FR_OK) {
-		printf("f_stat: mount_volume failed: %d\n", res);
 		return res;
 	}
 	INIT_NAMBUF(dj.obj.fs);
@@ -4803,8 +4802,6 @@ FRESULT f_stat (
 		} else {							/* Found an object */
 			if (fno) get_fileinfo(&dj, fno);
 		}
-	} else {
-		printf("f_stat: follow_path failed: %d\n", res);
 	}
 	FREE_NAMBUF();
 
