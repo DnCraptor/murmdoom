@@ -48,6 +48,7 @@ add_subdirectory(src/fatfs)
 # Add drivers
 add_subdirectory(drivers/sdcard)
 add_subdirectory(drivers/ps2kbd)
+add_subdirectory(drivers/ps2mouse)
 
 # Create a library for other drivers
 add_library(drivers
@@ -112,6 +113,7 @@ target_include_directories(murmdoom PRIVATE
     src/opl
     drivers
     drivers/sdcard
+    drivers/ps2mouse
 )
 
 target_compile_definitions(murmdoom PRIVATE
@@ -190,6 +192,7 @@ target_link_libraries(murmdoom
     hardware_interp
     sdcard
     ps2kbd
+    ps2mouse
     fatfs
     drivers
 )

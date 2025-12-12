@@ -11,6 +11,7 @@
 #include "sdcard.h"
 #include "ff.h"
 #include "ps2kbd_wrapper.h"
+#include "ps2mouse_wrapper.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -65,6 +66,9 @@ void DG_Init() {
 
     // Initialize PS/2 Keyboard
     ps2kbd_init();
+
+    // Initialize PS/2 Mouse
+    ps2mouse_wrapper_init();
 }
 
 void DG_DrawFrame() {
@@ -87,6 +91,7 @@ uint32_t DG_GetTicksMs() {
 
 int DG_GetKey(int* pressed, unsigned char* key) {
     ps2kbd_tick();
+    ps2mouse_wrapper_tick();  // Process mouse events
     return ps2kbd_get_key(pressed, key);
 }
 
