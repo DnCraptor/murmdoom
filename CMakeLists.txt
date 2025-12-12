@@ -49,6 +49,7 @@ add_subdirectory(src/fatfs)
 add_subdirectory(drivers/sdcard)
 add_subdirectory(drivers/ps2kbd)
 add_subdirectory(drivers/ps2mouse)
+add_subdirectory(drivers/usbhid)
 
 # Create a library for other drivers
 add_library(drivers
@@ -114,6 +115,7 @@ target_include_directories(murmdoom PRIVATE
     drivers
     drivers/sdcard
     drivers/ps2mouse
+    # drivers/usbhid is added conditionally by usbhid library
 )
 
 target_compile_definitions(murmdoom PRIVATE
@@ -193,6 +195,7 @@ target_link_libraries(murmdoom
     sdcard
     ps2kbd
     ps2mouse
+    usbhid
     fatfs
     drivers
 )
@@ -210,8 +213,16 @@ target_link_options(murmdoom PRIVATE
     -Wl,--wrap=rename
 )
 
-# Enable USB stdio
-pico_enable_stdio_usb(murmdoom 1)
-pico_enable_stdio_uart(murmdoom 0)
+# USB stdio configuration
+# When USB HID is enabled, USB is used for Host mode (keyboard/mouse),
+# so USB CDC stdio is not available. Use UART for debug output instead.
+if(USB_HID_ENABLED)
+    message(STATUS "USB HID enabled: Using UART for stdio (USB is Host mode)")
+    pico_enable_stdio_usb(murmdoom 0)
+    pico_enable_stdio_uart(murmdoom 1)
+else()
+    pico_enable_stdio_usb(murmdoom 1)
+    pico_enable_stdio_uart(murmdoom 0)
+endif()
 
 pico_add_extra_outputs(murmdoom)
