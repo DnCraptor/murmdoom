@@ -1,6 +1,6 @@
 # MurmDoom
 
-DOOM for Raspberry Pi Pico 2 (RP2350) with HDMI output, SD card, PS/2 keyboard, and OPL music.
+DOOM for Raspberry Pi Pico 2 (RP2350) with HDMI output, SD card, PS/2 and USB keyboard/mouse, and OPL music.
 
 ## Supported Boards
 
@@ -17,7 +17,9 @@ Both boards provide all necessary peripherals out of the box—no additional wir
 - Full OPL2 music emulation (EMU8950 with ARM assembly optimizations)
 - 8MB QSPI PSRAM support for game data
 - SD card support for WAD files and savegames
-- PS/2 keyboard input
+- **PS/2 keyboard and mouse input**
+- **USB keyboard and mouse input** (via native USB Host)
+- **USB hub support** for multiple devices
 - Sound effects and music at 49716 Hz
 
 ## Hardware Requirements
@@ -26,8 +28,11 @@ Both boards provide all necessary peripherals out of the box—no additional wir
 - **8MB QSPI PSRAM** (mandatory!)
 - **HDMI connector** (directly connected via resistors, no HDMI encoder needed)
 - **SD card module** (SPI mode)
-- **PS/2 keyboard** (directly connected)
+- **PS/2 keyboard and mouse** (directly connected) — OR —
+- **USB keyboard and mouse** (via native USB port, hub supported)
 - **I2S DAC module** (e.g., TDA1387) for audio output
+
+> **Note:** When USB HID is enabled, the native USB port is used for keyboard/mouse input. USB serial console (CDC) is disabled in this mode; use UART for debug output.
 
 ### PSRAM Options
 
@@ -69,6 +74,12 @@ Two GPIO layouts are supported: **M1** and **M2**. The PSRAM pin is auto-detecte
 | CLK    | 0       | 2       |
 | DATA   | 1       | 3       |
 
+### PS/2 Mouse
+| Signal | M1 GPIO | M2 GPIO |
+|--------|---------|---------|
+| CLK    | 14      | 0       |
+| DATA   | 15      | 1       |
+
 ### I2S Audio
 | Signal | M1 GPIO | M2 GPIO |
 |--------|---------|---------|
@@ -94,15 +105,29 @@ cd murmdoom
 # Or if already cloned, initialize submodules
 git submodule update --init --recursive
 
-# Build for M1 layout (default)
+# Build for M1 layout with PS/2 input (default)
 mkdir build && cd build
 cmake -DBOARD_VARIANT=M1 ..
 make -j$(nproc)
 
-# Or build for M2 layout
+# Build for M2 layout with PS/2 input
 cmake -DBOARD_VARIANT=M2 ..
 make -j$(nproc)
+
+# Build with USB keyboard/mouse support (instead of PS/2)
+cmake -DBOARD_VARIANT=M1 -DUSB_HID_ENABLED=1 ..
+make -j$(nproc)
 ```
+
+### Build Options
+
+| Option | Description |
+|--------|-------------|
+| `-DBOARD_VARIANT=M1` | Use M1 GPIO layout (default) |
+| `-DBOARD_VARIANT=M2` | Use M2 GPIO layout |
+| `-DUSB_HID_ENABLED=1` | Enable USB keyboard/mouse (disables USB serial) |
+| `-DCPU_SPEED=504` | CPU overclock in MHz (252, 378, 504) |
+| `-DPSRAM_SPEED=166` | PSRAM speed in MHz |
 
 Or use the build script (builds M1 by default):
 
@@ -148,13 +173,20 @@ For the full game, purchase DOOM or DOOM II from [Steam](https://store.steampowe
 
 ## Controls
 
-Standard DOOM keyboard controls:
+### Keyboard
 - Arrow keys: Move/Turn
 - Ctrl: Fire
 - Space: Open doors/Use
 - Shift: Run
 - 1-7: Select weapon
 - Escape: Menu
+
+### Mouse
+- Move left/right: Turn
+- Move forward/back: Move forward/back
+- Left button: Fire
+- Right button: Strafe
+- Middle button: Move forward
 
 ## License
 
