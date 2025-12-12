@@ -7,6 +7,9 @@
 #   - Medium overclock: 378 MHz CPU, 133 MHz PSRAM
 #   - Max overclock: 504 MHz CPU, 166 MHz PSRAM
 #
+# All builds include USB HID support (keyboard/mouse via USB).
+# PS/2 keyboard and mouse are also supported simultaneously.
+#
 # Output format: murmdoom_mX_Y_Z_A_BB.uf2
 #   X  = Board variant (1 or 2)
 #   Y  = CPU clock in MHz
@@ -134,8 +137,8 @@ for config in "${CONFIGS[@]}"; do
     mkdir build
     cd build
     
-    # Configure with CMake
-    cmake .. -DBOARD_VARIANT="$BOARD" -DCPU_SPEED="$CPU" -DPSRAM_SPEED="$PSRAM" > /dev/null 2>&1
+    # Configure with CMake (USB HID enabled for keyboard/mouse support)
+    cmake .. -DBOARD_VARIANT="$BOARD" -DCPU_SPEED="$CPU" -DPSRAM_SPEED="$PSRAM" -DUSB_HID_ENABLED=1 > /dev/null 2>&1
     
     # Build
     if make -j8 > /dev/null 2>&1; then
