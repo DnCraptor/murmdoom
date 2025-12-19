@@ -3,8 +3,10 @@
 #include "doomstat.h"
 #include "board_config.h"
 #include "pico/stdlib.h"
+#include "pico/stdio.h"
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
+#include "hardware/watchdog.h"
 #include "HDMI.h"
 #include "psram_init.h"
 #include "psram_allocator.h"
@@ -13,12 +15,15 @@
 #include "ps2kbd_wrapper.h"
 #include "ps2mouse_wrapper.h"
 #include "usbhid_wrapper.h"
+#include "murmdoom_log.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
 
 // External variables from i_video.c (when CMAP256 is defined)
 extern boolean palette_changed;
+
+#include "murmdoom_log.h"
 // Match struct color from i_video.h (Little Endian: b, g, r, a)
 extern struct {
     uint8_t b;
@@ -110,7 +115,7 @@ void I_Error(char *error, ...) {
     va_start(argptr, error);
     vprintf(error, argptr);
     va_end(argptr);
-    printf("\n");
+    putchar_raw('\n');
     while(1) tight_loop_contents();
 }
 
@@ -123,8 +128,11 @@ void *I_Realloc(void *ptr, size_t size) {
 }
 
 void I_Quit(void) {
-    printf("I_Quit\n");
-    while(1) tight_loop_contents();
+    // There is no OS to return to on bare metal. Reboot to restart the game.
+    watchdog_reboot(0, 0, 0);
+    while (1) {
+        tight_loop_contents();
+    }
 }
 
 byte *I_ZoneBase(int *size) {
@@ -143,16 +151,16 @@ void I_AtExit(void (*func)(void), boolean run_on_error) {
 }
 
 void I_PrintBanner(char *msg) {
-    printf("%s\n", msg);
+    MURMDOOM_LOG("%s\n", msg);
 }
 
 void I_PrintDivider(void) {
-    printf("------------------------------------------------\n");
+    MURMDOOM_LOG("------------------------------------------------\n");
 }
 
 void I_PrintStartupBanner(char *gamedescription) {
     I_PrintDivider();
-    printf("%s\n", gamedescription);
+    MURMDOOM_LOG("%s\n", gamedescription);
     I_PrintDivider();
 }
 

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
+option(MURMDOOM_QUIET "Compile out non-fatal logs" ON)
+
 # Set board to Pico 2 (RP2350)
 set(PICO_BOARD pico2 CACHE STRING "Pico board type")
 
@@ -156,6 +158,12 @@ target_compile_definitions(murmdoom PRIVATE
     EMU8950_NO_RATECONV=1
     PICO_ON_DEVICE=1
 )
+
+if(MURMDOOM_QUIET)
+    target_compile_definitions(murmdoom PRIVATE MURMDOOM_QUIET=1)
+else()
+    target_compile_definitions(murmdoom PRIVATE MURMDOOM_QUIET=0)
+endif()
 
 # Set peripheral pins based on board variant
 if(BOARD_VARIANT STREQUAL "M1")

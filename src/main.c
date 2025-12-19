@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "board_config.h"
+#include "murmdoom_log.h"
 
 // Flash timing configuration for overclocking
 // Must be called BEFORE changing system clock
@@ -59,9 +60,9 @@ int main() {
         sleep_ms(500);
     }
     
-    printf("murmdoom - DOOM for RP2350\n");
-    printf("System Clock: %lu MHz\n", clock_get_hz(clk_sys) / 1000000);
-    printf("Starting Doom...\n");
+    MURMDOOM_LOG("murmdoom - DOOM for RP2350\n");
+    MURMDOOM_LOG("System Clock: %lu MHz\n", clock_get_hz(clk_sys) / 1000000);
+    MURMDOOM_LOG("Starting Doom...\n");
 
     char *argv[] = {"doom", NULL};
     doomgeneric_Create(1, argv);

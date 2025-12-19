@@ -33,6 +33,7 @@
 
 #include "doomtype.h"
 #include "i_picosound.h"
+#include "murmdoom_log.h"
 #define none pico_audio_enum_none
 #include "pico/audio_i2s.h"
 #undef none
@@ -333,9 +334,9 @@ static boolean init_channel_for_sfx(channel_t *ch, const sfxinfo_t *sfxinfo, int
 
     static int header_logs = 0;
     if (header_logs < 12) {
-        printf("I_Pico_StartSound: header %s format=%04x adpcm=%d signed_pcm=%d rate=%u declared=%u payload=%d\n",
-               DEH_String(base->name), format, is_adpcm, is_signed_pcm, (unsigned)sample_freq,
-               (unsigned)declared_length, payload_length);
+        MURMDOOM_LOG("I_Pico_StartSound: header %s format=%04x adpcm=%d signed_pcm=%d rate=%u declared=%u payload=%d\n",
+                    DEH_String(base->name), format, is_adpcm, is_signed_pcm, (unsigned)sample_freq,
+                    (unsigned)declared_length, payload_length);
         header_logs++;
     }
     if (pitch == NORM_PITCH)
@@ -423,8 +424,8 @@ static int I_Pico_StartSound(sfxinfo_t *sfxinfo, int channel, int vol, int sep, 
     I_Pico_UpdateSoundParams(channel, vol, sep);
     static int start_logs = 0;
     if (start_logs < 8) {
-        printf("I_Pico_StartSound: %s channel %d vol %d sep %d\n",
-               DEH_String(sfxinfo->name), channel, vol, sep);
+        MURMDOOM_LOG("I_Pico_StartSound: %s channel %d vol %d sep %d\n",
+                    DEH_String(sfxinfo->name), channel, vol, sep);
         start_logs++;
     }
     // Removed debug dump call
@@ -536,9 +537,9 @@ static void mix_audio_buffer(audio_buffer_t *buffer)
             if (v < 0) v = -v;
             if (v > max) max = v;
         }
-        printf("I_Pico_UpdateSound: mixed %d samples (active=%d), peak=%ld first=%d second=%d\n",
-               buffer->sample_count, active_channels, (long)max,
-               sample_view[0], sample_view[1]);
+        MURMDOOM_LOG("I_Pico_UpdateSound: mixed %d samples (active=%d), peak=%ld first=%d second=%d\n",
+                    buffer->sample_count, active_channels, (long)max,
+                    sample_view[0], sample_view[1]);
         mix_logs++;
         if (active_channels) {
             mix_logs_after_activity++;
@@ -562,7 +563,7 @@ static void I_Pico_UpdateSound(void)
     if (!mixed) {
         static int buffer_skip_logs = 0;
         if (buffer_skip_logs < 4) {
-            printf("I_Pico_UpdateSound: no buffer ready this tick\n");
+            MURMDOOM_LOG("I_Pico_UpdateSound: no buffer ready this tick\n");
             buffer_skip_logs++;
         }
     }
@@ -582,12 +583,12 @@ static boolean I_Pico_InitSound(boolean _use_sfx_prefix)
     use_sfx_prefix = _use_sfx_prefix;
 
     // todo this will likely need adjustment - maybe with IRQs/double buffer & pull from audio we can make it quite small
-    printf("I_Pico_InitSound: creating producer pool\n");
+    MURMDOOM_LOG("I_Pico_InitSound: creating producer pool\n");
     // Increased buffer count from 3 to 4 for smoother audio and reduced dropouts
     producer_pool = audio_new_producer_pool(&producer_format, 4, PICO_SOUND_BUFFER_SAMPLES);
     if (producer_pool == NULL)
     {
-        printf("I_Pico_InitSound: failed to allocate producer pool\n");
+        MURMDOOM_WARN("I_Pico_InitSound: failed to allocate producer pool\n");
         return false;
     }
 
@@ -598,7 +599,7 @@ static boolean I_Pico_InitSound(boolean _use_sfx_prefix)
             .pio_sm = PICO_AUDIO_I2S_STATE_MACHINE,
     };
 
-            printf("I_Pico_InitSound: calling audio_i2s_setup (PIO %d pins D%d CLK%d, DMA %d SM %d)\n",
+            MURMDOOM_LOG("I_Pico_InitSound: calling audio_i2s_setup (PIO %d pins D%d CLK%d, DMA %d SM %d)\n",
                 PICO_AUDIO_I2S_PIO,
                 PICO_AUDIO_I2S_DATA_PIN,
                 PICO_AUDIO_I2S_CLOCK_PIN_BASE,
@@ -609,7 +610,7 @@ static boolean I_Pico_InitSound(boolean _use_sfx_prefix)
     if (!output_format) {
         panic("PicoAudio: Unable to open audio device.\n");
     }
-    printf("I_Pico_InitSound: audio_i2s_setup succeeded\n");
+    MURMDOOM_LOG("I_Pico_InitSound: audio_i2s_setup succeeded\n");
 
 #if INCREASE_I2S_DRIVE_STRENGTH
     bi_decl(bi_program_feature("12mA I2S"));
@@ -618,14 +619,14 @@ static boolean I_Pico_InitSound(boolean _use_sfx_prefix)
     gpio_set_drive_strength(PICO_AUDIO_I2S_CLOCK_PIN_BASE+1, GPIO_DRIVE_STRENGTH_12MA);
 #endif
     // we want to pass thr
-    printf("I_Pico_InitSound: connecting audio pipeline\n");
+    MURMDOOM_LOG("I_Pico_InitSound: connecting audio pipeline\n");
     bool ok = audio_i2s_connect_extra(producer_pool, false, 0, 0, NULL);
     assert(ok);
-    printf("I_Pico_InitSound: enabling I2S\n");
+    MURMDOOM_LOG("I_Pico_InitSound: enabling I2S\n");
     audio_i2s_set_enabled(true);
 
     sound_initialized = true;
-    printf("I_Pico_InitSound: initialization complete\n");
+    MURMDOOM_LOG("I_Pico_InitSound: initialization complete\n");
     return true;
 }
 
@@ -665,8 +666,8 @@ bool I_PicoSoundIsInitialized(void) {
 
 void I_PicoSoundSetMusicGenerator(void (*generator)(audio_buffer_t *buffer)) {
     music_generator = generator;
-    printf("I_PicoSoundSetMusicGenerator: music generator %s\n", 
-           generator ? "SET" : "CLEARED");
+    MURMDOOM_LOG("I_PicoSoundSetMusicGenerator: music generator %s\n",
+                generator ? "SET" : "CLEARED");
 }
 
 // Only define stub music module if OPL music is not used

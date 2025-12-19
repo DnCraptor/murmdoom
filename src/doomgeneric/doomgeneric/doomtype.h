@@ -66,6 +66,10 @@
 
 #include <inttypes.h>
 
+// Murmdoom: optionally suppress noisy stdio output without disabling the
+// USB CDC console itself.
+#include "murmdoom_quiet_stdio.h"
+
 #ifdef __cplusplus
 
 // Use builtin bool type with C++.

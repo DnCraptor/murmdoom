@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "murmdoom_log.h"
 
 // Increased from 1024 to handle 1421 samples per buffer at 49716 Hz
 #define SAMPLE_BUF_SIZE 2048
@@ -749,7 +750,12 @@ static INLINE void update_perc_mode(OPL *opl) {
     }
     opl->perc_mode = new_perc_mode;
 #else
-    assert(!((opl->reg[0xbd] >> 5) & 1)); // new_perc_mode should be 0
+    // Percussion mode is not supported in this optimized build.
+    // Some songs (eg Doom II intermission music) may try to enable it.
+    // Mask it off rather than asserting/crashing.
+    if ((opl->reg[0xbd] >> 5) & 1) {
+        opl->reg[0xbd] &= (uint8_t)~(1u << 5);
+    }
 #endif
 }
 
@@ -1920,14 +1926,14 @@ void OPL_writeReg(OPL *opl, uint32_t reg, uint8_t data) {
 #if !EMU8950_NO_TIMER
             latch_timer1(opl);
 #else
-            printf("WARNING TIMER1 LATCH\n");
+        MURMDOOM_WARN("WARNING TIMER1 LATCH\n");
 #endif
         }
         if (data & 0x02) {
 #if !EMU8950_NO_TIMER
             latch_timer2(opl);
 #else
-            printf("WARNING TIMER2 LATCH\n");
+        MURMDOOM_WARN("WARNING TIMER2 LATCH\n");
 #endif
         }
 
