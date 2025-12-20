@@ -21,6 +21,311 @@
 #include <stdarg.h>
 #include <string.h>
 
+static void draw_char_5x7(int x, int y, char ch, pixel_t color) {
+    // 5x7 glyphs, bits are MSB->LSB across 5 columns.
+    // Only implements characters needed for the start screen text.
+    const uint8_t *rows = NULL;
+    static const uint8_t glyph_space[7] = {0, 0, 0, 0, 0, 0, 0};
+    static const uint8_t glyph_dot[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C};
+    static const uint8_t glyph_colon[7] = {0x00, 0x0C, 0x0C, 0x00, 0x0C, 0x0C, 0x00};
+    static const uint8_t glyph_hyphen[7] = {0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00};
+
+    static const uint8_t glyph_0[7] = {0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E};
+    static const uint8_t glyph_1[7] = {0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E};
+    static const uint8_t glyph_2[7] = {0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F};
+    static const uint8_t glyph_3[7] = {0x1E, 0x01, 0x01, 0x0E, 0x01, 0x01, 0x1E};
+    static const uint8_t glyph_4[7] = {0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02};
+    static const uint8_t glyph_5[7] = {0x1F, 0x10, 0x10, 0x1E, 0x01, 0x01, 0x1E};
+    static const uint8_t glyph_6[7] = {0x0E, 0x10, 0x10, 0x1E, 0x11, 0x11, 0x0E};
+    static const uint8_t glyph_7[7] = {0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08};
+    static const uint8_t glyph_8[7] = {0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E};
+    static const uint8_t glyph_9[7] = {0x0E, 0x11, 0x11, 0x0F, 0x01, 0x01, 0x0E};
+
+    static const uint8_t glyph_a[7] = {0x00, 0x00, 0x0E, 0x01, 0x0F, 0x11, 0x0F};
+    static const uint8_t glyph_b[7] = {0x10, 0x10, 0x1E, 0x11, 0x11, 0x11, 0x1E};
+    static const uint8_t glyph_c[7] = {0x00, 0x00, 0x0E, 0x11, 0x10, 0x11, 0x0E};
+    static const uint8_t glyph_d[7] = {0x01, 0x01, 0x0D, 0x13, 0x11, 0x13, 0x0D};
+    static const uint8_t glyph_e[7] = {0x00, 0x00, 0x0E, 0x11, 0x1F, 0x10, 0x0F};
+    static const uint8_t glyph_f[7] = {0x06, 0x08, 0x1E, 0x08, 0x08, 0x08, 0x08};
+    static const uint8_t glyph_g[7] = {0x00, 0x00, 0x0F, 0x11, 0x0F, 0x01, 0x0E};
+    static const uint8_t glyph_h[7] = {0x10, 0x10, 0x1E, 0x11, 0x11, 0x11, 0x11};
+    static const uint8_t glyph_i[7] = {0x04, 0x00, 0x0C, 0x04, 0x04, 0x04, 0x0E};
+    static const uint8_t glyph_j[7] = {0x02, 0x00, 0x06, 0x02, 0x02, 0x12, 0x0C};
+    static const uint8_t glyph_k[7] = {0x10, 0x10, 0x11, 0x12, 0x1C, 0x12, 0x11};
+    static const uint8_t glyph_l[7] = {0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x06};
+    static const uint8_t glyph_m[7] = {0x00, 0x00, 0x1A, 0x15, 0x15, 0x15, 0x15};
+    static const uint8_t glyph_n[7] = {0x00, 0x00, 0x1E, 0x11, 0x11, 0x11, 0x11};
+    static const uint8_t glyph_o[7] = {0x00, 0x00, 0x0E, 0x11, 0x11, 0x11, 0x0E};
+    static const uint8_t glyph_p[7] = {0x00, 0x00, 0x1E, 0x11, 0x1E, 0x10, 0x10};
+    static const uint8_t glyph_q[7] = {0x00, 0x00, 0x0D, 0x13, 0x13, 0x0D, 0x01};
+    static const uint8_t glyph_r[7] = {0x00, 0x00, 0x16, 0x19, 0x10, 0x10, 0x10};
+    static const uint8_t glyph_s[7] = {0x00, 0x00, 0x0F, 0x10, 0x0E, 0x01, 0x1E};
+    static const uint8_t glyph_t[7] = {0x04, 0x04, 0x1F, 0x04, 0x04, 0x04, 0x03};
+    static const uint8_t glyph_u[7] = {0x00, 0x00, 0x11, 0x11, 0x11, 0x13, 0x0D};
+    static const uint8_t glyph_v[7] = {0x00, 0x00, 0x11, 0x11, 0x11, 0x0A, 0x04};
+    static const uint8_t glyph_w[7] = {0x00, 0x00, 0x11, 0x11, 0x15, 0x15, 0x0A};
+    static const uint8_t glyph_x[7] = {0x00, 0x00, 0x11, 0x0A, 0x04, 0x0A, 0x11};
+    static const uint8_t glyph_y[7] = {0x00, 0x00, 0x11, 0x11, 0x0F, 0x01, 0x0E};
+    static const uint8_t glyph_z[7] = {0x00, 0x00, 0x1F, 0x02, 0x04, 0x08, 0x1F};
+
+    static const uint8_t glyph_A[7] = {0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11};
+    static const uint8_t glyph_B[7] = {0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E};
+    static const uint8_t glyph_C[7] = {0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E};
+    static const uint8_t glyph_D[7] = {0x1E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1E};
+    static const uint8_t glyph_E[7] = {0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F};
+    static const uint8_t glyph_F[7] = {0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10};
+    static const uint8_t glyph_G[7] = {0x0E, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0E};
+    static const uint8_t glyph_H[7] = {0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11};
+    static const uint8_t glyph_I[7] = {0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x1F};
+    static const uint8_t glyph_J[7] = {0x07, 0x02, 0x02, 0x02, 0x12, 0x12, 0x0C};
+    static const uint8_t glyph_K[7] = {0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11};
+    static const uint8_t glyph_L[7] = {0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F};
+    static const uint8_t glyph_M[7] = {0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11};
+    static const uint8_t glyph_N[7] = {0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11};
+    static const uint8_t glyph_O[7] = {0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E};
+    static const uint8_t glyph_P[7] = {0x1E, 0x11, 0x11, 0x1E, 0x10, 0x10, 0x10};
+    static const uint8_t glyph_Q[7] = {0x0E, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0D};
+    static const uint8_t glyph_R[7] = {0x1E, 0x11, 0x11, 0x1E, 0x14, 0x12, 0x11};
+    static const uint8_t glyph_S[7] = {0x0F, 0x10, 0x10, 0x0E, 0x01, 0x01, 0x1E};
+    static const uint8_t glyph_T[7] = {0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04};
+    static const uint8_t glyph_U[7] = {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E};
+    static const uint8_t glyph_V[7] = {0x11, 0x11, 0x11, 0x11, 0x0A, 0x0A, 0x04};
+    static const uint8_t glyph_W[7] = {0x11, 0x11, 0x11, 0x15, 0x15, 0x15, 0x0A};
+    static const uint8_t glyph_X[7] = {0x11, 0x0A, 0x04, 0x04, 0x04, 0x0A, 0x11};
+    static const uint8_t glyph_Y[7] = {0x11, 0x0A, 0x04, 0x04, 0x04, 0x04, 0x04};
+    static const uint8_t glyph_Z[7] = {0x1F, 0x02, 0x04, 0x08, 0x10, 0x10, 0x1F};
+
+    int c = (unsigned char)ch;
+
+    switch (c) {
+        case ' ': rows = glyph_space; break;
+        case '.': rows = glyph_dot; break;
+        case ':': rows = glyph_colon; break;
+        case '-': rows = glyph_hyphen; break;
+
+        case '0': rows = glyph_0; break;
+        case '1': rows = glyph_1; break;
+        case '2': rows = glyph_2; break;
+        case '3': rows = glyph_3; break;
+        case '4': rows = glyph_4; break;
+        case '5': rows = glyph_5; break;
+        case '6': rows = glyph_6; break;
+        case '7': rows = glyph_7; break;
+        case '8': rows = glyph_8; break;
+        case '9': rows = glyph_9; break;
+
+        case 'a': rows = glyph_a; break;
+        case 'b': rows = glyph_b; break;
+        case 'c': rows = glyph_c; break;
+        case 'd': rows = glyph_d; break;
+        case 'e': rows = glyph_e; break;
+        case 'f': rows = glyph_f; break;
+        case 'g': rows = glyph_g; break;
+        case 'h': rows = glyph_h; break;
+        case 'i': rows = glyph_i; break;
+        case 'j': rows = glyph_j; break;
+        case 'k': rows = glyph_k; break;
+        case 'l': rows = glyph_l; break;
+        case 'm': rows = glyph_m; break;
+        case 'n': rows = glyph_n; break;
+        case 'o': rows = glyph_o; break;
+        case 'p': rows = glyph_p; break;
+        case 'q': rows = glyph_q; break;
+        case 'r': rows = glyph_r; break;
+        case 's': rows = glyph_s; break;
+        case 't': rows = glyph_t; break;
+        case 'u': rows = glyph_u; break;
+        case 'v': rows = glyph_v; break;
+        case 'w': rows = glyph_w; break;
+        case 'x': rows = glyph_x; break;
+        case 'y': rows = glyph_y; break;
+        case 'z': rows = glyph_z; break;
+
+        case 'A': rows = glyph_A; break;
+        case 'B': rows = glyph_B; break;
+        case 'C': rows = glyph_C; break;
+        case 'D': rows = glyph_D; break;
+        case 'E': rows = glyph_E; break;
+        case 'F': rows = glyph_F; break;
+        case 'G': rows = glyph_G; break;
+        case 'H': rows = glyph_H; break;
+        case 'I': rows = glyph_I; break;
+        case 'J': rows = glyph_J; break;
+        case 'K': rows = glyph_K; break;
+        case 'L': rows = glyph_L; break;
+        case 'M': rows = glyph_M; break;
+        case 'N': rows = glyph_N; break;
+        case 'O': rows = glyph_O; break;
+        case 'P': rows = glyph_P; break;
+        case 'Q': rows = glyph_Q; break;
+        case 'R': rows = glyph_R; break;
+        case 'S': rows = glyph_S; break;
+        case 'T': rows = glyph_T; break;
+        case 'U': rows = glyph_U; break;
+        case 'V': rows = glyph_V; break;
+        case 'W': rows = glyph_W; break;
+        case 'X': rows = glyph_X; break;
+        case 'Y': rows = glyph_Y; break;
+        case 'Z': rows = glyph_Z; break;
+
+        default: rows = glyph_space; break;
+    }
+
+    for (int row = 0; row < 7; ++row) {
+        int yy = y + row;
+        if (yy < 0 || yy >= DOOMGENERIC_RESY) continue;
+        uint8_t bits = rows[row];
+        for (int col = 0; col < 5; ++col) {
+            int xx = x + col;
+            if (xx < 0 || xx >= DOOMGENERIC_RESX) continue;
+            if (bits & (1u << (4 - col))) {
+                DG_ScreenBuffer[yy * DOOMGENERIC_RESX + xx] = color;
+            }
+        }
+    }
+}
+
+static void draw_text_5x7(int x, int y, const char *text, pixel_t color) {
+    // 5px glyph + 1px spacing
+    const int advance = 6;
+    for (const char *p = text; *p; ++p) {
+        draw_char_5x7(x, y, *p, color);
+        x += advance;
+    }
+}
+
+static int ascii_tolower(int c) {
+    if (c >= 'A' && c <= 'Z') return c - 'A' + 'a';
+    return c;
+}
+
+static int ascii_strcasecmp(const char *a, const char *b) {
+    while (*a && *b) {
+        int ca = ascii_tolower((unsigned char)*a);
+        int cb = ascii_tolower((unsigned char)*b);
+        if (ca != cb) return ca - cb;
+        ++a;
+        ++b;
+    }
+    return ascii_tolower((unsigned char)*a) - ascii_tolower((unsigned char)*b);
+}
+
+static void console_vprintf(const char *fmt, va_list ap) {
+    vprintf(fmt, ap);
+}
+
+static void console_printf(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    console_vprintf(fmt, ap);
+    va_end(ap);
+}
+
+static bool has_wad_extension(const char *name) {
+    size_t n = strlen(name);
+    if (n < 4) return false;
+    return (ascii_tolower((unsigned char)name[n - 4]) == '.'
+         && ascii_tolower((unsigned char)name[n - 3]) == 'w'
+         && ascii_tolower((unsigned char)name[n - 2]) == 'a'
+         && ascii_tolower((unsigned char)name[n - 1]) == 'd');
+}
+
+static bool is_known_compatible_iwad_name(const char *name) {
+    // Keep this aligned with the engine's IWAD table in d_iwad.c.
+    static const char *const known[] = {
+        "doom2.wad",
+        "plutonia.wad",
+        "tnt.wad",
+        "doom.wad",
+        "doom1.wad",
+        "chex.wad",
+        "hacx.wad",
+        "freedm.wad",
+        "freedoom2.wad",
+        "freedoom1.wad",
+        "heretic.wad",
+        "heretic1.wad",
+        "hexen.wad",
+        "strife1.wad",
+    };
+
+    for (size_t i = 0; i < sizeof(known) / sizeof(known[0]); ++i) {
+        if (ascii_strcasecmp(name, known[i]) == 0) return true;
+    }
+    return false;
+}
+
+static void print_available_wads_to_console(void) {
+    console_printf("\n=== WAD scan (/) ===\n");
+    fflush(stdout);
+
+    // 1) Print known-compatible IWADs found by exact name.
+    static const char *const iwads[] = {
+        "doom2.wad",
+        "plutonia.wad",
+        "tnt.wad",
+        "doom.wad",
+        "doom1.wad",
+        "chex.wad",
+        "hacx.wad",
+        "freedm.wad",
+        "freedoom2.wad",
+        "freedoom1.wad",
+        "heretic.wad",
+        "heretic1.wad",
+        "hexen.wad",
+        "strife1.wad",
+    };
+
+    console_printf("Compatible IWAD filenames:\n");
+    int compatible_found = 0;
+    for (size_t i = 0; i < sizeof(iwads) / sizeof(iwads[0]); ++i) {
+        FILINFO info;
+        FRESULT fr = f_stat(iwads[i], &info);
+        if (fr == FR_OK) {
+            console_printf("  [FOUND] %s\n", iwads[i]);
+            compatible_found++;
+        }
+    }
+    if (!compatible_found) {
+        console_printf("  (none found by standard IWAD names)\n");
+    }
+    fflush(stdout);
+
+    // 2) Print any other .wad files in the directory (likely PWADs or nonstandard names).
+    console_printf("Other .wad files:\n");
+    DIR dir;
+    FILINFO fno;
+    FRESULT fr = f_opendir(&dir, "/");
+    if (fr != FR_OK) {
+        console_printf("  (failed to open root dir: %d)\n", (int)fr);
+        fflush(stdout);
+        return;
+    }
+
+    int other_count = 0;
+    for (;;) {
+        fr = f_readdir(&dir, &fno);
+        if (fr != FR_OK || fno.fname[0] == 0) break;
+
+        // Skip directories.
+        if (fno.fattrib & AM_DIR) continue;
+        if (!has_wad_extension(fno.fname)) continue;
+        if (is_known_compatible_iwad_name(fno.fname)) continue;
+
+        console_printf("  %s\n", fno.fname);
+        other_count++;
+    }
+    f_closedir(&dir);
+
+    if (!other_count) {
+        console_printf("  (none)\n");
+    }
+
+    console_printf("=== Press Enter to start ===\n\n");
+    fflush(stdout);
+}
+
 // External variables from i_video.c (when CMAP256 is defined)
 extern boolean palette_changed;
 
@@ -32,6 +337,8 @@ extern struct {
     uint8_t r;
     uint8_t a;
 } colors[256];
+
+#include "pico/stdio_usb.h"
 
 // External stdio init for FatFS
 extern void stdio_fatfs_init(void);
@@ -82,12 +389,63 @@ void DG_Init() {
 }
 
 void DG_StartScreen(void) {
-    // Solid gray background using palette index 0.
-    graphics_set_palette(0, 0x808080);
+    // Solid black background using palette index 0.
+    graphics_set_palette(0, 0x000000);
+    graphics_set_palette(1, 0xFFFFFF);
     memset(DG_ScreenBuffer, 0, DOOMGENERIC_RESX * DOOMGENERIC_RESY * sizeof(pixel_t));
+
+    // Draw available Doom IWADs (only Doom, not Heretic/Hexen/etc).
+    static const char *const doom_iwads[] = {
+        "doom2.wad",
+        "plutonia.wad",
+        "tnt.wad",
+        "doom.wad",
+        "doom1.wad",
+    };
+
+    draw_text_5x7(8, 16, "DOOM IWADS:", 1);
+    int found = 0;
+    int line = 0;
+    for (size_t i = 0; i < sizeof(doom_iwads) / sizeof(doom_iwads[0]); ++i) {
+        FILINFO info;
+        if (f_stat(doom_iwads[i], &info) == FR_OK) {
+            draw_text_5x7(8, 32 + line * 10, doom_iwads[i], 1);
+            found++;
+            line++;
+        }
+    }
+    if (!found) {
+        draw_text_5x7(8, 32, "NONE", 1);
+    }
+
+    draw_text_5x7(8, DOOMGENERIC_RESY - 16, "PRESS ENTER", 1);
+
+    // Print WAD scan after ~3s or as soon as USB CDC is connected.
+    // If the first print happens while disconnected (common if the host opens the monitor late),
+    // print again once after it connects.
+    const uint32_t start_ms = to_ms_since_boot(get_absolute_time());
+    bool printed = false;
+    bool printed_while_disconnected = false;
 
     // Wait for Enter.
     while (true) {
+        bool usb_connected = true;
+#if PICO_STDIO_USB
+        usb_connected = stdio_usb_connected();
+#endif
+
+        if (!printed) {
+            const uint32_t elapsed_ms = to_ms_since_boot(get_absolute_time()) - start_ms;
+            if (usb_connected || elapsed_ms >= 3000) {
+                print_available_wads_to_console();
+                printed = true;
+                printed_while_disconnected = !usb_connected;
+            }
+        } else if (printed_while_disconnected && usb_connected) {
+            print_available_wads_to_console();
+            printed_while_disconnected = false;
+        }
+
         int pressed = 0;
         unsigned char key = 0;
         while (DG_GetKey(&pressed, &key)) {
