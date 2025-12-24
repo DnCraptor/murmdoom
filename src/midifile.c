@@ -709,13 +709,28 @@ static boolean ReadTrackFirstChunk(midi_track_t *track, FILE *stream)
 static void FreeTrack(midi_track_t *track)
 {
     unsigned int i;
+    // Use chunk_count for streaming mode - it's the actual number of events in buffer
+    // num_events may be a cumulative count that exceeds the buffer size
+    unsigned int events_to_free = track->chunk_count > 0 ? track->chunk_count : track->num_events;
 
-    for (i=0; i<track->num_events; ++i)
+    printf("FreeTrack: track=%p num_events=%u chunk_count=%u events_to_free=%u events=%p\n", 
+           (void*)track, track->num_events, track->chunk_count, events_to_free, (void*)track->events);
+    fflush(stdout);
+
+    for (i=0; i<events_to_free; ++i)
     {
+        if (i < 3 || i == events_to_free - 1) {
+            printf("FreeTrack: FreeEvent %u/%u\n", i, events_to_free);
+            fflush(stdout);
+        }
         FreeEvent(&track->events[i]);
     }
 
+    printf("FreeTrack: midi_free events\n");
+    fflush(stdout);
     midi_free(track->events);
+    printf("FreeTrack: done\n");
+    fflush(stdout);
 }
 
 static boolean ReadAllTracks(midi_file_t *file, FILE *stream)
@@ -785,34 +800,50 @@ static boolean ReadFileHeader(midi_file_t *file, FILE *stream)
 
 void MIDI_FreeFile(midi_file_t *file)
 {
+    printf("MIDI_FreeFile: entry file=%p\n", (void*)file);
+    fflush(stdout);
 
 #if !USE_DIRECT_MIDI_LUMP
+    printf("MIDI_FreeFile: file->tracks=%p num_tracks=%d\n", (void*)file->tracks, file->num_tracks);
+    fflush(stdout);
     if (file->tracks != NULL)
     {
         int i;
         for (i=0; i<file->num_tracks; ++i)
         {
+            printf("MIDI_FreeFile: FreeTrack %d\n", i);
+            fflush(stdout);
             FreeTrack(&file->tracks[i]);
         }
         midi_free(file->tracks);
     }
     
     // Close streaming file handle
+    printf("MIDI_FreeFile: file->stream=%p\n", (void*)file->stream);
+    fflush(stdout);
     if (file->stream != NULL)
     {
         fclose(file->stream);
         file->stream = NULL;
     }
     
-    // Free stored filename
+    // Delete and free stored filename
+    printf("MIDI_FreeFile: file->filename=%p\n", (void*)file->filename);
+    fflush(stdout);
     if (file->filename != NULL)
     {
+        // Delete the temp file from SD card now that we're done with it
+        remove(file->filename);
         midi_free(file->filename);
         file->filename = NULL;
     }
 #endif
 
+    printf("MIDI_FreeFile: midi_free(file)\n");
+    fflush(stdout);
     midi_free(file);
+    printf("MIDI_FreeFile: done\n");
+    fflush(stdout);
 }
 
 #if !USE_DIRECT_MIDI_LUMP
@@ -1068,6 +1099,8 @@ unsigned int MIDI_GetFileTimeDivision(midi_file_t *file)
 
 void MIDI_RestartIterator(midi_track_iter_t *iter)
 {
+    printf("MIDI_RestartIterator: iter=%p\n", (void*)iter);
+    fflush(stdout);
     iter->position = 0;
 #if USE_MUSX
     iter->peek_index = 0;
@@ -1081,8 +1114,15 @@ void MIDI_RestartIterator(midi_track_iter_t *iter)
     midi_track_t *track = iter->track;
     midi_file_t *file = iter->file;
     
+    printf("MIDI_RestartIterator: track=%p chunk_start=%u chunk_count=%u num_events=%u\n",
+           (void*)track, track->chunk_start, track->chunk_count, track->num_events);
+    fflush(stdout);
+    
     if (file && file->stream && track->chunk_start > 0)
     {
+        printf("MIDI_RestartIterator: reloading first chunk\n");
+        fflush(stdout);
+        
         // Free existing events
         for (unsigned int i = 0; i < track->chunk_count; i++)
         {
@@ -1112,10 +1152,18 @@ void MIDI_RestartIterator(midi_track_iter_t *iter)
         psram_set_temp_mode(0);
 #endif
         
+        printf("MIDI_RestartIterator: events_read=%d\n", events_read);
+        fflush(stdout);
+        
         if (events_read > 0)
         {
             track->num_events = events_read;
         }
+    }
+    else
+    {
+        printf("MIDI_RestartIterator: no reload needed (chunk_start=0 or no stream)\n");
+        fflush(stdout);
     }
 #endif
 }

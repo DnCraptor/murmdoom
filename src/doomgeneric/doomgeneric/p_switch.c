@@ -201,6 +201,9 @@ P_ChangeSwitchTexture
     int     texBot;
     int     i;
     int     sound;
+
+    printf("P_ChangeSwitchTexture: entry, line=%p, useAgain=%d\n", (void*)line, useAgain);
+    fflush(stdout);
 	
     if (!useAgain)
 	line->special = 0;
@@ -214,12 +217,19 @@ P_ChangeSwitchTexture
     // EXIT SWITCH?
     if (line->special == 11)                
 	sound = sfx_swtchx;
+
+    printf("P_ChangeSwitchTexture: about to loop, numswitches=%d\n", numswitches);
+    fflush(stdout);
 	
     for (i = 0;i < numswitches*2;i++)
     {
 	if (switchlist[i] == texTop)
 	{
-	    S_StartSound(buttonlist->soundorg,sound);
+	    printf("P_ChangeSwitchTexture: found texTop, calling S_StartSound\n");
+	    fflush(stdout);
+	    S_StartSound((mobj_t *)&line->frontsector->soundorg,sound);
+	    printf("P_ChangeSwitchTexture: S_StartSound returned\n");
+	    fflush(stdout);
 	    sides[line->sidenum[0]].toptexture = switchlist[i^1];
 
 	    if (useAgain)
@@ -231,7 +241,7 @@ P_ChangeSwitchTexture
 	{
 	    if (switchlist[i] == texMid)
 	    {
-		S_StartSound(buttonlist->soundorg,sound);
+		S_StartSound((mobj_t *)&line->frontsector->soundorg,sound);
 		sides[line->sidenum[0]].midtexture = switchlist[i^1];
 
 		if (useAgain)
@@ -243,7 +253,7 @@ P_ChangeSwitchTexture
 	    {
 		if (switchlist[i] == texBot)
 		{
-		    S_StartSound(buttonlist->soundorg,sound);
+		    S_StartSound((mobj_t *)&line->frontsector->soundorg,sound);
 		    sides[line->sidenum[0]].bottomtexture = switchlist[i^1];
 
 		    if (useAgain)

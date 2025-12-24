@@ -1450,33 +1450,53 @@ void WI_drawStats(void)
     // line height
     int lh;	
 
+    printf("WI_drawStats: entry\n");
+    fflush(stdout);
+
     lh = (3*SHORT(num[0]->height))/2;
 
+    printf("WI_drawStats: slamBackground\n");
+    fflush(stdout);
     WI_slamBackground();
 
+    printf("WI_drawStats: drawAnimatedBack\n");
+    fflush(stdout);
     // draw animated background
     WI_drawAnimatedBack();
     
+    printf("WI_drawStats: drawLF\n");
+    fflush(stdout);
     WI_drawLF();
 
+    printf("WI_drawStats: kills patch, cnt_kills[0]=%d\n", cnt_kills[0]);
+    fflush(stdout);
     V_DrawPatch(SP_STATSX, SP_STATSY, kills);
     WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY, cnt_kills[0]);
 
+    printf("WI_drawStats: items patch, cnt_items[0]=%d\n", cnt_items[0]);
+    fflush(stdout);
     V_DrawPatch(SP_STATSX, SP_STATSY+lh, items);
     WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+lh, cnt_items[0]);
 
+    printf("WI_drawStats: secret patch, cnt_secret[0]=%d\n", cnt_secret[0]);
+    fflush(stdout);
     V_DrawPatch(SP_STATSX, SP_STATSY+2*lh, sp_secret);
     WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
 
+    printf("WI_drawStats: time patch\n");
+    fflush(stdout);
     V_DrawPatch(SP_TIMEX, SP_TIMEY, timepatch);
     WI_drawTime(SCREENWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time);
 
+    printf("WI_drawStats: par check, epsd=%d\n", wbs->epsd);
+    fflush(stdout);
     if (wbs->epsd < 3)
     {
 	V_DrawPatch(SCREENWIDTH/2 + SP_TIMEX, SP_TIMEY, par);
 	WI_drawTime(SCREENWIDTH - SP_TIMEX, SP_TIMEY, cnt_par);
     }
-
+    printf("WI_drawStats: done\n");
+    fflush(stdout);
 }
 
 void WI_checkForAccelerate(void)
@@ -1514,20 +1534,31 @@ void WI_checkForAccelerate(void)
 // Updates stuff each tick
 void WI_Ticker(void)
 {
+    printf("WI_Ticker: entry, bcnt=%d\n", bcnt);
+    fflush(stdout);
+
     // counter for general background animation
     bcnt++;  
 
     if (bcnt == 1)
     {
 	// intermission music
+	printf("WI_Ticker: changing music, gamemode=%d\n", gamemode);
+	fflush(stdout);
   	if ( gamemode == commercial )
 	  S_ChangeMusic(mus_dm2int, true);
 	else
 	  S_ChangeMusic(mus_inter, true); 
+	printf("WI_Ticker: music change done\n");
+	fflush(stdout);
     }
 
+    printf("WI_Ticker: checkForAccelerate\n");
+    fflush(stdout);
     WI_checkForAccelerate();
 
+    printf("WI_Ticker: state=%d\n", state);
+    fflush(stdout);
     switch (state)
     {
       case StatCount:
@@ -1704,16 +1735,24 @@ static void WI_loadUnloadData(load_callback_t callback)
 
 static void WI_loadCallback(char *name, patch_t **variable)
 {
+    printf("  WI_load: %s\n", name);
+    fflush(stdout);
     *variable = W_CacheLumpName(name, PU_STATIC);
 }
 
 void WI_loadData(void)
 {
+    printf("WI_loadData: START (gamemode=%d)\n", gamemode);
+    fflush(stdout);
     if (gamemode == commercial)
     {
 	NUMCMAPS = 32;
+	printf("WI_loadData: Z_Malloc lnames array...\n");
+	fflush(stdout);
 	lnames = (patch_t **) Z_Malloc(sizeof(patch_t*) * NUMCMAPS,
 				       PU_STATIC, NULL);
+	printf("WI_loadData: lnames allocated at %p\n", (void*)lnames);
+	fflush(stdout);
     }
     else
     {
@@ -1721,12 +1760,17 @@ void WI_loadData(void)
 				       PU_STATIC, NULL);
     }
 
+    printf("WI_loadData: WI_loadUnloadData...\n");
+    fflush(stdout);
     WI_loadUnloadData(WI_loadCallback);
+    printf("WI_loadData: WI_loadUnloadData done\n");
+    fflush(stdout);
 
     // These two graphics are special cased because we're sharing
     // them with the status bar code
 
     // your face
+    printf("WI_loadData: loading STFST01...\n");
     star = W_CacheLumpName(DEH_String("STFST01"), PU_STATIC);
 
     // dead face
@@ -1752,15 +1796,21 @@ void WI_unloadData(void)
 
 void WI_Drawer (void)
 {
+    printf("WI_Drawer: state=%d\n", state);
+    fflush(stdout);
     switch (state)
     {
       case StatCount:
+	printf("WI_Drawer: StatCount, deathmatch=%d netgame=%d\n", deathmatch, netgame);
+	fflush(stdout);
 	if (deathmatch)
 	    WI_drawDeathmatchStats();
 	else if (netgame)
 	    WI_drawNetgameStats();
 	else
 	    WI_drawStats();
+	printf("WI_Drawer: drawStats done\n");
+	fflush(stdout);
 	break;
 	
       case ShowNextLoc:
@@ -1818,7 +1868,11 @@ void WI_initVariables(wbstartstruct_t* wbstartstruct)
 
 void WI_Start(wbstartstruct_t* wbstartstruct)
 {
+    printf("WI_Start: initVariables...\n");
+    fflush(stdout);
     WI_initVariables(wbstartstruct);
+    printf("WI_Start: loadData...\n");
+    fflush(stdout);
     WI_loadData();
 
     if (deathmatch)

@@ -411,6 +411,9 @@ void S_StartSound(void *origin_p, int sfx_id)
     int cnum;
     int volume;
 
+    printf("S_StartSound: entry origin=%p sfx_id=%d\n", origin_p, sfx_id);
+    fflush(stdout);
+
     origin = (mobj_t *) origin_p;
     volume = snd_SfxVolume;
     pitch = NORM_PITCH;
@@ -422,6 +425,9 @@ void S_StartSound(void *origin_p, int sfx_id)
     }
 
     sfx = &S_sfx[sfx_id];
+
+    printf("S_StartSound: sfx=%p, checking link\n", (void*)sfx);
+    fflush(stdout);
 
     // Initialize sound parameters
     if (sfx->link)
@@ -440,21 +446,30 @@ void S_StartSound(void *origin_p, int sfx_id)
         }
     }
 
+    printf("S_StartSound: checking audible, origin=%p, player mo=%p\n", 
+           (void*)origin, (void*)players[consoleplayer].mo);
+    fflush(stdout);
 
     // Check to see if it is audible,
     //  and if not, modify the params
     if (origin && origin != players[consoleplayer].mo)
     {
+        printf("S_StartSound: calling S_AdjustSoundParams\n");
+        fflush(stdout);
         rc = S_AdjustSoundParams(players[consoleplayer].mo,
                                  origin,
                                  &volume,
                                  &sep);
 
+        printf("S_StartSound: checking origin->x/y, origin=%p\n", (void*)origin);
+        fflush(stdout);
         if (origin->x == players[consoleplayer].mo->x
          && origin->y == players[consoleplayer].mo->y)
         {        
             sep = NORM_SEP;
         }
+        printf("S_StartSound: origin access OK\n");
+        fflush(stdout);
 
         if (!rc)
         {
@@ -465,6 +480,9 @@ void S_StartSound(void *origin_p, int sfx_id)
     {
         sep = NORM_SEP;
     }
+
+    printf("S_StartSound: past audibility check\n");
+    fflush(stdout);
 
     if (sfx_id >= sfx_sawup && sfx_id <= sfx_sawhit)
     {
@@ -631,6 +649,9 @@ void S_ChangeMusic(int musicnum, int looping)
     char namebuf[9];
     void *handle;
 
+    printf("S_ChangeMusic: entry musicnum=%d looping=%d\n", musicnum, looping);
+    fflush(stdout);
+
     // The Doom IWAD file has two versions of the intro music: d_intro
     // and d_introa.  The latter is used for OPL playback.
 
@@ -651,25 +672,42 @@ void S_ChangeMusic(int musicnum, int looping)
 
     if (mus_playing == music)
     {
+        printf("S_ChangeMusic: already playing, return\n");
+        fflush(stdout);
         return;
     }
 
     // shutdown old music
+    printf("S_ChangeMusic: S_StopMusic\n");
+    fflush(stdout);
     S_StopMusic();
 
     // get lumpnum if neccessary
+    printf("S_ChangeMusic: getting lumpnum, current=%d\n", music->lumpnum);
+    fflush(stdout);
     if (!music->lumpnum)
     {
         M_snprintf(namebuf, sizeof(namebuf), "d_%s", DEH_String(music->name));
+        printf("S_ChangeMusic: looking up %s\n", namebuf);
+        fflush(stdout);
         music->lumpnum = W_GetNumForName(namebuf);
     }
 
+    printf("S_ChangeMusic: W_CacheLumpNum %d\n", music->lumpnum);
+    fflush(stdout);
     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
 
+    printf("S_ChangeMusic: I_RegisterSong data=%p len=%d\n", music->data, W_LumpLength(music->lumpnum));
+    fflush(stdout);
     handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
     music->handle = handle;
+
+    printf("S_ChangeMusic: I_PlaySong handle=%p\n", handle);
+    fflush(stdout);
     I_PlaySong(handle, looping);
 
+    printf("S_ChangeMusic: done\n");
+    fflush(stdout);
     mus_playing = music;
 }
 
@@ -680,18 +718,48 @@ boolean S_MusicPlaying(void)
 
 void S_StopMusic(void)
 {
+    printf("S_StopMusic: entry, mus_playing=%p\n", (void*)mus_playing);
+    fflush(stdout);
     if (mus_playing)
     {
+        printf("S_StopMusic: mus_paused=%d\n", mus_paused);
+        fflush(stdout);
         if (mus_paused)
         {
+            printf("S_StopMusic: I_ResumeSong\n");
+            fflush(stdout);
             I_ResumeSong();
         }
 
+        printf("S_StopMusic: I_StopSong\n");
+        fflush(stdout);
         I_StopSong();
+        printf("S_StopMusic: I_UnRegisterSong handle=%p\n", mus_playing->handle);
+        fflush(stdout);
         I_UnRegisterSong(mus_playing->handle);
+        printf("S_StopMusic: W_ReleaseLumpNum %d\n", mus_playing->lumpnum);
+        fflush(stdout);
         W_ReleaseLumpNum(mus_playing->lumpnum);
+        printf("S_StopMusic: clearing data\n");
+        fflush(stdout);
         mus_playing->data = NULL;
         mus_playing = NULL;
     }
+    printf("S_StopMusic: done\n");
+    fflush(stdout);
 }
 
+// Stop all sound effects channels.
+// Used before freeing level data on memory-constrained systems.
+void S_StopAllSounds(void)
+{
+    int cnum;
+    printf("S_StopAllSounds: stopping %d channels\n", snd_channels);
+    fflush(stdout);
+    for (cnum = 0; cnum < snd_channels; cnum++)
+    {
+        S_StopChannel(cnum);
+    }
+    printf("S_StopAllSounds: done\n");
+    fflush(stdout);
+}

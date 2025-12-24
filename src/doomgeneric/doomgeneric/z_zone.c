@@ -219,6 +219,8 @@ Z_Malloc
         if (rover == start)
         {
             // scanned all the way around the list
+            printf("Z_Malloc FAIL: size=%d, free=%d\n", size, Z_FreeMemory());
+            fflush(stdout);
             I_Error ("Z_Malloc: failed on allocation of %i bytes", size);
         }
 	

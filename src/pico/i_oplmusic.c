@@ -1408,6 +1408,8 @@ uint8_t restart_song_state;
 
 void RestartSong(void *unused)
 {
+    printf("RestartSong: starting, num_tracks=%u\n", num_tracks);
+    fflush(stdout);
 #if DOOM_TINY
     if (restart_song_state & 1) {
         // need to defer restart of song (because of stack)
@@ -1424,6 +1426,8 @@ void RestartSong(void *unused)
 
     for (i = 0; i < num_tracks; ++i)
     {
+        printf("RestartSong: track %u iter=%p\n", i, (void*)tracks[i].iter);
+        fflush(stdout);
         MIDI_RestartIterator(tracks[i].iter);
         ScheduleTrack(&tracks[i]);
     }
@@ -1432,6 +1436,8 @@ void RestartSong(void *unused)
     {
         InitChannel(&channels[i]);
     }
+    printf("RestartSong: done\n");
+    fflush(stdout);
 }
 
 // Callback function invoked when another event needs to be read from
@@ -1785,12 +1791,17 @@ static void *I_OPL_RegisterSong(void *data, int len)
         stderr_print( "I_OPL_RegisterSong: Failed to load MID.\n");
         // Reset temp memory on failure to clean up partial allocations
         psram_reset_temp();
+        // Delete temp file on failure since MIDI_FreeFile won't be called
+        if (free_file) {
+            remove(filename);
+        }
     }
 
-    // remove file now
+    // Don't remove file now - it's still open for streaming!
+    // The file will be deleted in MIDI_FreeFile when unregistering the song.
 
     if (free_file) {
-        remove(filename);
+        // Only free the filename string, not the file itself
         free(filename);
     }
 #endif

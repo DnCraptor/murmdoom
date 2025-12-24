@@ -851,11 +851,20 @@ boolean G_Responder (event_t* ev)
 // G_Ticker
 // Make ticcmd_ts for the players.
 //
+static int g_ticker_count = 0;
+
 void G_Ticker (void) 
 { 
     int		i;
     int		buf; 
     ticcmd_t*	cmd;
+
+    // Periodic memory status (every ~5 seconds at 35 tics/sec)
+    g_ticker_count++;
+    if (g_ticker_count % 175 == 0) {
+        printf("MEMSTAT[%d]: Zone free=%d\n", g_ticker_count, Z_FreeMemory());
+        fflush(stdout);
+    }
     
     // do player reborns if needed
     for (i=0 ; i<MAXPLAYERS ; i++) 
@@ -865,6 +874,8 @@ void G_Ticker (void)
     // do things to change the game state
     while (gameaction != ga_nothing) 
     { 
+	printf("G_Ticker: gameaction=%d\n", gameaction);
+	fflush(stdout);
 	switch (gameaction) 
 	{ 
 	  case ga_loadlevel: 
@@ -883,6 +894,8 @@ void G_Ticker (void)
 	    G_DoPlayDemo (); 
 	    break; 
 	  case ga_completed: 
+	    printf("G_Ticker: calling G_DoCompleted\n");
+	    fflush(stdout);
 	    G_DoCompleted (); 
 	    break; 
 	  case ga_victory: 
@@ -1327,6 +1340,8 @@ extern char*	pagename;
  
 void G_ExitLevel (void) 
 { 
+    printf("G_ExitLevel called!\n");
+    fflush(stdout);
     secretexit = false; 
     gameaction = ga_completed; 
 } 
@@ -1347,6 +1362,8 @@ void G_DoCompleted (void)
 { 
     int             i; 
 	 
+    printf("G_DoCompleted: START\n");
+    fflush(stdout);
     gameaction = ga_nothing; 
  
     for (i=0 ; i<MAXPLAYERS ; i++) 
@@ -1482,9 +1499,28 @@ void G_DoCompleted (void)
     viewactive = false; 
     automapactive = false; 
 
+    printf("G_DoCompleted: StatCopy...\n");
+    fflush(stdout);
     StatCopy(&wminfo);
+
+    printf("G_DoCompleted: Stopping sounds...\n");
+    fflush(stdout);
+    // Free level data before loading intermission graphics to reduce peak memory.
+    // All needed stats have been captured in wminfo at this point.
+    // This is critical for memory-constrained embedded systems.
+    // Stop all sound channels first to clear any references to level mobj_t pointers.
+    S_StopAllSounds();
+    printf("G_DoCompleted: Z_FreeTags...\n");
+    fflush(stdout);
+    Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1);
+    printf("G_DoCompleted: Z_FreeMemory = %d\n", Z_FreeMemory());
+    fflush(stdout);
  
-    WI_Start (&wminfo); 
+    printf("G_DoCompleted: WI_Start...\n");
+    fflush(stdout);
+    WI_Start (&wminfo);
+    printf("G_DoCompleted: DONE\n");
+    fflush(stdout); 
 } 
 
 

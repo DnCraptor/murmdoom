@@ -76,6 +76,7 @@ void *psram_malloc(size_t size) {
     } else {
         if (psram_offset + total_size > PERM_SIZE) {
             printf("PSRAM Perm OOM! Req %d, free %d\n", (int)size, (int)(PERM_SIZE - psram_offset));
+            fflush(stdout);
             return NULL;
         }
         
@@ -83,7 +84,13 @@ void *psram_malloc(size_t size) {
         *header = size;
         
         void *ptr = (void *)(header + 1);
-        printf("psram_malloc(%d) -> %p (offset %d) Total Perm: %d\n", (int)size, ptr, (int)psram_offset, (int)(psram_offset + total_size));
+        // Only log large allocations or when getting low on memory
+        size_t remaining = PERM_SIZE - (psram_offset + total_size);
+        if (size >= 65536 || remaining < 256 * 1024) {
+            printf("psram_malloc(%d) -> %p Total: %d Remaining: %d\n", 
+                   (int)size, ptr, (int)(psram_offset + total_size), (int)remaining);
+            fflush(stdout);
+        }
         psram_offset += total_size;
         return ptr;
     }
